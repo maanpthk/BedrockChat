@@ -2,6 +2,7 @@ import logging
 import json
 import io
 import base64
+import re
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 
@@ -23,6 +24,28 @@ from pptx.enum.text import PP_ALIGN
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+
+def _sanitize_filename(filename: str) -> str:
+    """
+    Sanitize filename to comply with AWS Bedrock document restrictions:
+    - Only alphanumeric characters, whitespace characters, hyphens, parentheses, and square brackets
+    - No more than one consecutive whitespace character
+    """
+    # Remove invalid characters (keep only alphanumeric, spaces, hyphens, parentheses, square brackets)
+    sanitized = re.sub(r"[^a-zA-Z0-9\s\-\(\)\[\]]", "", filename)
+    
+    # Replace multiple consecutive whitespace characters with single space
+    sanitized = re.sub(r"\s+", " ", sanitized)
+    
+    # Trim whitespace from start and end
+    sanitized = sanitized.strip()
+    
+    # If the filename is empty after sanitization, provide a default
+    if not sanitized:
+        sanitized = "document"
+    
+    return sanitized
 
 
 class ExcelGeneratorInput(BaseModel):
@@ -99,8 +122,9 @@ def _generate_excel(tool_input: ExcelGeneratorInput, bot: BotModel | None, model
         wb.save(excel_buffer)
         excel_buffer.seek(0)
         
-        # Create filename
-        filename = f"{tool_input.title.replace(' ', '_')}.xlsx"
+        # Create filename with proper sanitization
+        sanitized_title = _sanitize_filename(tool_input.title)
+        filename = f"{sanitized_title}.xlsx"
         
         return DocumentToolResultModel(
             format="xls",
@@ -192,8 +216,9 @@ def _generate_word(tool_input: WordGeneratorInput, bot: BotModel | None, model: 
         doc.save(word_buffer)
         word_buffer.seek(0)
         
-        # Create filename
-        filename = f"{tool_input.title.replace(' ', '_')}.docx"
+        # Create filename with proper sanitization
+        sanitized_title = _sanitize_filename(tool_input.title)
+        filename = f"{sanitized_title}.docx"
         
         return DocumentToolResultModel(
             format="docx",
@@ -276,8 +301,9 @@ def _generate_powerpoint(tool_input: PowerPointGeneratorInput, bot: BotModel | N
 </html>
 """
         
-        # Create filename
-        filename = f"{tool_input.title.replace(' ', '_')}_presentation.html"
+        # Create filename with proper sanitization
+        sanitized_title = _sanitize_filename(tool_input.title)
+        filename = f"{sanitized_title} presentation.html"
         
         return DocumentToolResultModel(
             format="html",
