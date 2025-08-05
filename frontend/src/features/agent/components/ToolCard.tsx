@@ -12,9 +12,14 @@ import {
 } from 'react-icons/pi';
 import { twMerge } from 'tailwind-merge';
 import useToolCardExpand from '../hooks/useToolCardExpand';
-import { AgentToolResultContent, RelatedDocument } from '../../../@types/conversation';
+import { AgentToolResultContent, AgentToolResultDocumentContent, RelatedDocument } from '../../../@types/conversation';
 import { getAgentName } from '../functions/formatDescription';
 import RelatedDocumentViewer from '../../../components/RelatedDocumentViewer';
+
+// Type guard functions
+const isDocumentContent = (content: AgentToolResultContent): content is AgentToolResultDocumentContent => {
+  return 'document' in content;
+};
 
 // Theme of JSONTree
 // NOTE: need to set the theme as base16 style
@@ -202,7 +207,7 @@ const ToolCard: React.FC<ToolCardProps> = ({
             shouldExpandNodeInitially={() => false}
           />
         )}
-        {'document' in document.content && (
+        {isDocumentContent(document.content) && (
           <div className="flex items-center space-x-2">
             <div className="break-all line-clamp-1 dark:text-aws-font-color-dark">
               📄 {document.content.name}.{document.content.format}
@@ -233,12 +238,12 @@ const ToolCard: React.FC<ToolCardProps> = ({
                   const mimeType = mimeTypes[document.content.format] || 'application/octet-stream';
                   const blob = new Blob([byteArray], { type: mimeType });
                   const url = window.URL.createObjectURL(blob);
-                  const link = document.createElement('a');
+                  const link = window.document.createElement('a');
                   link.href = url;
                   link.download = `${document.content.name}.${document.content.format}`;
-                  document.body.appendChild(link);
+                  window.document.body.appendChild(link);
                   link.click();
-                  document.body.removeChild(link);
+                  window.document.body.removeChild(link);
                   window.URL.revokeObjectURL(url);
                 } catch (error) {
                   console.error('Error downloading file:', error);

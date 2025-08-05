@@ -2,8 +2,13 @@ import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { JSONTree } from 'react-json-tree';
 
-import { RelatedDocument } from '../@types/conversation';
+import { RelatedDocument, AgentToolResultContent, AgentToolResultDocumentContent } from '../@types/conversation';
 import { getAgentName } from '../features/agent/functions/formatDescription';
+
+// Type guard function
+const isDocumentContent = (content: AgentToolResultContent): content is AgentToolResultDocumentContent => {
+  return 'document' in content;
+};
 
 const RelatedDocumentViewer: React.FC<{
   relatedDocument: Omit<RelatedDocument, 'sourceId'>;
@@ -51,7 +56,7 @@ const RelatedDocumentViewer: React.FC<{
             invertTheme={false} // disable dark theme
           />
         )}
-        {'document' in content && (
+        {isDocumentContent(content) && (
           <div className="flex flex-col items-center space-y-4 p-4">
             <div className="text-lg font-semibold">
               📄 {content.name}.{content.format}
@@ -85,12 +90,12 @@ const RelatedDocumentViewer: React.FC<{
                   const mimeType = mimeTypes[content.format] || 'application/octet-stream';
                   const blob = new Blob([byteArray], { type: mimeType });
                   const url = window.URL.createObjectURL(blob);
-                  const link = document.createElement('a');
+                  const link = window.document.createElement('a');
                   link.href = url;
                   link.download = `${content.name}.${content.format}`;
-                  document.body.appendChild(link);
+                  window.document.body.appendChild(link);
                   link.click();
-                  document.body.removeChild(link);
+                  window.document.body.removeChild(link);
                   window.URL.revokeObjectURL(url);
                 } catch (error) {
                   console.error('Error downloading file:', error);
