@@ -78,15 +78,20 @@ def _generate_excel(tool_input: ExcelGeneratorInput, bot: BotModel | None, model
         # Auto-adjust column widths
         for column in ws.columns:
             max_length = 0
-            column_letter = column[0].column_letter
+            column_letter = None
             for cell in column:
                 try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
+                    # Skip merged cells that don't have column_letter attribute
+                    if hasattr(cell, 'column_letter'):
+                        column_letter = cell.column_letter
+                        if cell.value and len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
                 except:
                     pass
-            adjusted_width = min(max_length + 2, 50)
-            ws.column_dimensions[column_letter].width = adjusted_width
+            
+            if column_letter:
+                adjusted_width = min(max_length + 2, 50)
+                ws.column_dimensions[column_letter].width = adjusted_width
         
         # Save to bytes
         excel_buffer = io.BytesIO()
@@ -97,7 +102,7 @@ def _generate_excel(tool_input: ExcelGeneratorInput, bot: BotModel | None, model
         filename = f"{tool_input.title.replace(' ', '_')}.xlsx"
         
         return DocumentToolResult(
-            format="xlsx",
+            format="xls",
             name=filename,
             document=excel_buffer.getvalue()
         )
@@ -125,29 +130,61 @@ def _generate_word(tool_input: WordGeneratorInput, bot: BotModel | None, model: 
         
         # Add content sections
         for section in tool_input.content:
-            section_type = section.get('type', 'paragraph')
-            
-            if section_type == 'heading':
-                level = section.get('level', 2)
-                doc.add_heading(section.get('text', ''), level=level)
-                
-            elif section_type == 'paragraph':
-                doc.add_paragraph(section.get('text', ''))
-                
-            elif section_type == 'list':
-                items = section.get('items', [])
-                for item in items:
-                    doc.add_paragraph(str(item), style='List Bullet')
+            try:
+                # Handle both dict and string inputs
+                if isinstance(section, str):
+                    # If it's a string, treat it as a paragraph
+                    doc.add_paragraph(section)
+                    continue
                     
-            elif section_type == 'table':
-                table_data = section.get('data', [])
-                if table_data:
-                    table = doc.add_table(rows=len(table_data), cols=len(table_data[0]))
-                    table.style = 'Table Grid'
+                if not isinstance(section, dict):
+                    # If it's neither string nor dict, convert to string and add as paragraph
+                    doc.add_paragraph(str(section))
+                    continue
+                
+                section_type = section.get('type', 'paragraph')
+                
+                if section_type == 'heading':
+                    level = section.get('level', 2)
+                    text = section.get('text', '')
+                    if text:
+                        doc.add_heading(text, level=level)
                     
-                    for row_idx, row_data in enumerate(table_data):
-                        for col_idx, cell_data in enumerate(row_data):
-                            table.cell(row_idx, col_idx).text = str(cell_data)
+                elif section_type == 'paragraph':
+                    text = section.get('text', '')
+                    if text:
+                        doc.add_paragraph(text)
+                    
+                elif section_type == 'list':
+                    items = section.get('items', [])
+                    if items:
+                        for item in items:
+                            doc.add_paragraph(str(item), style='List Bullet')
+                        
+                elif section_type == 'table':
+                    table_data = section.get('data', [])
+                    if table_data and len(table_data) > 0:
+                        # Ensure all rows have the same number of columns
+                        max_cols = max(len(row) if isinstance(row, list) else 1 for row in table_data)
+                        table = doc.add_table(rows=len(table_data), cols=max_cols)
+                        table.style = 'Table Grid'
+                        
+                        for row_idx, row_data in enumerate(table_data):
+                            if isinstance(row_data, list):
+                                for col_idx, cell_data in enumerate(row_data):
+                                    if col_idx < max_cols:
+                                        table.cell(row_idx, col_idx).text = str(cell_data)
+                            else:
+                                table.cell(row_idx, 0).text = str(row_data)
+                else:
+                    # Unknown section type, treat as paragraph
+                    text = section.get('text', str(section))
+                    doc.add_paragraph(text)
+                    
+            except Exception as section_error:
+                logger.warning(f"Error processing section {section}: {section_error}")
+                # Fallback: add the section as a paragraph
+                doc.add_paragraph(str(section))
         
         # Save to bytes
         word_buffer = io.BytesIO()
@@ -169,55 +206,82 @@ def _generate_word(tool_input: WordGeneratorInput, bot: BotModel | None, model: 
 
 
 def _generate_powerpoint(tool_input: PowerPointGeneratorInput, bot: BotModel | None, model: type_model_name | None) -> DocumentToolResult:
-    """Generate a PowerPoint presentation from the provided slides."""
+    """Generate a PowerPoint presentation as HTML format (since pptx is not supported by DocumentToolResult)."""
     try:
-        logger.info(f"Generating PowerPoint presentation: {tool_input.title}")
+        logger.info(f"Generating PowerPoint presentation as HTML: {tool_input.title}")
         
-        # Create presentation
-        prs = Presentation()
-        
-        # Add title slide
-        title_slide_layout = prs.slide_layouts[0]  # Title slide layout
-        title_slide = prs.slides.add_slide(title_slide_layout)
-        title_slide.shapes.title.text = tool_input.title
-        title_slide.placeholders[1].text = f"Generated on {datetime.now().strftime('%Y-%m-%d')}"
+        # Generate HTML presentation
+        html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{tool_input.title}</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }}
+        .slide {{ 
+            background: white; 
+            margin: 20px 0; 
+            padding: 40px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            page-break-after: always;
+        }}
+        .slide-title {{ 
+            font-size: 28px; 
+            font-weight: bold; 
+            color: #333; 
+            margin-bottom: 20px; 
+            border-bottom: 3px solid #007acc;
+            padding-bottom: 10px;
+        }}
+        .slide-content {{ font-size: 18px; line-height: 1.6; }}
+        .slide-content ul {{ margin: 10px 0; }}
+        .slide-content li {{ margin: 8px 0; }}
+        .title-slide {{ text-align: center; }}
+        .title-slide h1 {{ font-size: 36px; color: #007acc; margin-bottom: 20px; }}
+        .title-slide p {{ font-size: 20px; color: #666; }}
+        @media print {{ .slide {{ page-break-after: always; }} }}
+    </style>
+</head>
+<body>
+    <div class="slide title-slide">
+        <h1>{tool_input.title}</h1>
+        <p>Generated on {datetime.now().strftime('%Y-%m-%d')}</p>
+    </div>
+"""
         
         # Add content slides
         for slide_data in tool_input.slides:
-            slide_layout = prs.slide_layouts[1]  # Title and content layout
-            slide = prs.slides.add_slide(slide_layout)
-            
-            # Add slide title
-            slide.shapes.title.text = slide_data.get('title', 'Slide')
-            
-            # Add content
+            slide_title = slide_data.get('title', 'Slide')
             content = slide_data.get('content', [])
-            if content:
-                content_placeholder = slide.placeholders[1]
-                text_frame = content_placeholder.text_frame
-                text_frame.clear()
-                
-                for i, item in enumerate(content):
-                    if i == 0:
-                        p = text_frame.paragraphs[0]
-                    else:
-                        p = text_frame.add_paragraph()
-                    
-                    p.text = str(item)
-                    p.level = 0
+            
+            html_content += f"""
+    <div class="slide">
+        <div class="slide-title">{slide_title}</div>
+        <div class="slide-content">
+            <ul>
+"""
+            
+            for item in content:
+                html_content += f"                <li>{str(item)}</li>\n"
+            
+            html_content += """            </ul>
+        </div>
+    </div>
+"""
         
-        # Save to bytes
-        ppt_buffer = io.BytesIO()
-        prs.save(ppt_buffer)
-        ppt_buffer.seek(0)
+        html_content += """
+</body>
+</html>
+"""
         
         # Create filename
-        filename = f"{tool_input.title.replace(' ', '_')}.pptx"
+        filename = f"{tool_input.title.replace(' ', '_')}_presentation.html"
         
         return DocumentToolResult(
-            format="pptx",
+            format="html",
             name=filename,
-            document=ppt_buffer.getvalue()
+            document=html_content.encode('utf-8')
         )
         
     except Exception as e:
