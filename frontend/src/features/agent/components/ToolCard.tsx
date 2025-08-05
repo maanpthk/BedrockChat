@@ -12,14 +12,9 @@ import {
 } from 'react-icons/pi';
 import { twMerge } from 'tailwind-merge';
 import useToolCardExpand from '../hooks/useToolCardExpand';
-import { AgentToolResultContent, AgentToolResultDocumentContent, RelatedDocument } from '../../../@types/conversation';
+import { AgentToolResultContent, RelatedDocument } from '../../../@types/conversation';
 import { getAgentName } from '../functions/formatDescription';
 import RelatedDocumentViewer from '../../../components/RelatedDocumentViewer';
-
-// Type guard functions
-const isDocumentContent = (content: AgentToolResultContent): content is AgentToolResultDocumentContent => {
-  return 'document' in content;
-};
 
 // Theme of JSONTree
 // NOTE: need to set the theme as base16 style
@@ -207,16 +202,22 @@ const ToolCard: React.FC<ToolCardProps> = ({
             shouldExpandNodeInitially={() => false}
           />
         )}
-        {isDocumentContent(document.content) && (
+        {'json' in document.content && 
+         document.content.json && 
+         typeof document.content.json === 'object' && 
+         'format' in document.content.json && 
+         'name' in document.content.json && 
+         'document' in document.content.json && (
           <div className="flex items-center space-x-2">
             <div className="break-all line-clamp-1 dark:text-aws-font-color-dark">
-              📄 {document.content.name}.{document.content.format}
+              📄 {document.content.json.name}.{document.content.json.format}
             </div>
             <button
               className="px-3 py-1 text-xs bg-aws-sea-blue-light text-white rounded hover:bg-aws-sea-blue-hover-light dark:bg-aws-sea-blue-dark dark:hover:bg-aws-sea-blue-hover-dark"
               onClick={() => {
                 try {
-                  const byteCharacters = atob(document.content.document);
+                  const docData = document.content.json;
+                  const byteCharacters = atob(docData.document);
                   const byteNumbers = new Array(byteCharacters.length);
                   for (let i = 0; i < byteCharacters.length; i++) {
                     byteNumbers[i] = byteCharacters.charCodeAt(i);
@@ -235,12 +236,12 @@ const ToolCard: React.FC<ToolCardProps> = ({
                     'md': 'text/markdown'
                   };
                   
-                  const mimeType = mimeTypes[document.content.format] || 'application/octet-stream';
+                  const mimeType = mimeTypes[docData.format] || 'application/octet-stream';
                   const blob = new Blob([byteArray], { type: mimeType });
                   const url = window.URL.createObjectURL(blob);
                   const link = window.document.createElement('a');
                   link.href = url;
-                  link.download = `${document.content.name}.${document.content.format}`;
+                  link.download = `${docData.name}.${docData.format}`;
                   window.document.body.appendChild(link);
                   link.click();
                   window.document.body.removeChild(link);

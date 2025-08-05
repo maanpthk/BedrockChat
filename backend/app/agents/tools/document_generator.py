@@ -8,7 +8,6 @@ from datetime import datetime
 
 from app.agents.tools.agent_tool import AgentTool
 from app.repositories.models.custom_bot import BotModel
-from app.repositories.models.conversation import DocumentToolResultModel
 from app.routes.schemas.conversation import type_model_name
 from pydantic import BaseModel, Field
 
@@ -66,7 +65,7 @@ class PowerPointGeneratorInput(BaseModel):
     slides: List[Dict[str, Any]] = Field(description="Slide content. Each dict should have 'title' and 'content' (list of bullet points or paragraphs)")
 
 
-def _generate_excel(tool_input: ExcelGeneratorInput, bot: BotModel | None, model: type_model_name | None) -> DocumentToolResultModel:
+def _generate_excel(tool_input: ExcelGeneratorInput, bot: BotModel | None, model: type_model_name | None) -> Dict[str, Any]:
     """Generate an Excel file from the provided data."""
     try:
         logger.info(f"Generating Excel document: {tool_input.title}")
@@ -127,18 +126,22 @@ def _generate_excel(tool_input: ExcelGeneratorInput, bot: BotModel | None, model
         sanitized_title = _sanitize_filename(tool_input.title)
         filename = sanitized_title
         
-        return DocumentToolResultModel(
-            format="xls",
-            name=filename,
-            document=excel_buffer.getvalue()
-        )
+        # Return as JSON content with base64 encoded document
+        return {
+            "content": {
+                "format": "xls",
+                "name": filename,
+                "document": base64.b64encode(excel_buffer.getvalue()).decode('utf-8')
+            },
+            "source_name": f"{filename}.xls"
+        }
         
     except Exception as e:
         logger.error(f"Error generating Excel document: {e}")
         raise e
 
 
-def _generate_word(tool_input: WordGeneratorInput, bot: BotModel | None, model: type_model_name | None) -> DocumentToolResultModel:
+def _generate_word(tool_input: WordGeneratorInput, bot: BotModel | None, model: type_model_name | None) -> Dict[str, Any]:
     """Generate a Word document from the provided content."""
     try:
         logger.info(f"Generating Word document: {tool_input.title}")
@@ -221,18 +224,22 @@ def _generate_word(tool_input: WordGeneratorInput, bot: BotModel | None, model: 
         sanitized_title = _sanitize_filename(tool_input.title)
         filename = sanitized_title
         
-        return DocumentToolResultModel(
-            format="docx",
-            name=filename,
-            document=word_buffer.getvalue()
-        )
+        # Return as JSON content with base64 encoded document
+        return {
+            "content": {
+                "format": "docx",
+                "name": filename,
+                "document": base64.b64encode(word_buffer.getvalue()).decode('utf-8')
+            },
+            "source_name": f"{filename}.docx"
+        }
         
     except Exception as e:
         logger.error(f"Error generating Word document: {e}")
         raise e
 
 
-def _generate_powerpoint(tool_input: PowerPointGeneratorInput, bot: BotModel | None, model: type_model_name | None) -> DocumentToolResultModel:
+def _generate_powerpoint(tool_input: PowerPointGeneratorInput, bot: BotModel | None, model: type_model_name | None) -> Dict[str, Any]:
     """Generate a PowerPoint presentation as HTML format (since pptx is not supported by DocumentToolResult)."""
     try:
         logger.info(f"Generating PowerPoint presentation as HTML: {tool_input.title}")
@@ -306,11 +313,15 @@ def _generate_powerpoint(tool_input: PowerPointGeneratorInput, bot: BotModel | N
         sanitized_title = _sanitize_filename(tool_input.title)
         filename = f"{sanitized_title} presentation"
         
-        return DocumentToolResultModel(
-            format="html",
-            name=filename,
-            document=html_content.encode('utf-8')
-        )
+        # Return as JSON content with base64 encoded document
+        return {
+            "content": {
+                "format": "html",
+                "name": filename,
+                "document": base64.b64encode(html_content.encode('utf-8')).decode('utf-8')
+            },
+            "source_name": f"{filename}.html"
+        }
         
     except Exception as e:
         logger.error(f"Error generating PowerPoint presentation: {e}")

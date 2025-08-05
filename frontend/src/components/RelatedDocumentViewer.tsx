@@ -2,13 +2,8 @@ import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { JSONTree } from 'react-json-tree';
 
-import { RelatedDocument, AgentToolResultContent, AgentToolResultDocumentContent } from '../@types/conversation';
+import { RelatedDocument } from '../@types/conversation';
 import { getAgentName } from '../features/agent/functions/formatDescription';
-
-// Type guard function
-const isDocumentContent = (content: AgentToolResultContent): content is AgentToolResultDocumentContent => {
-  return 'document' in content;
-};
 
 const RelatedDocumentViewer: React.FC<{
   relatedDocument: Omit<RelatedDocument, 'sourceId'>;
@@ -56,10 +51,15 @@ const RelatedDocumentViewer: React.FC<{
             invertTheme={false} // disable dark theme
           />
         )}
-        {isDocumentContent(content) && (
+        {'json' in content && 
+         content.json && 
+         typeof content.json === 'object' && 
+         'format' in content.json && 
+         'name' in content.json && 
+         'document' in content.json && (
           <div className="flex flex-col items-center space-y-4 p-4">
             <div className="text-lg font-semibold">
-              📄 {content.name}.{content.format}
+              📄 {content.json.name}.{content.json.format}
             </div>
             <div className="text-sm text-gray-400">
               Document ready for download
@@ -68,7 +68,8 @@ const RelatedDocumentViewer: React.FC<{
               className="px-4 py-2 bg-aws-sea-blue-light text-white rounded hover:bg-aws-sea-blue-hover-light dark:bg-aws-sea-blue-dark dark:hover:bg-aws-sea-blue-hover-dark"
               onClick={() => {
                 try {
-                  const byteCharacters = atob(content.document);
+                  const docData = content.json;
+                  const byteCharacters = atob(docData.document);
                   const byteNumbers = new Array(byteCharacters.length);
                   for (let i = 0; i < byteCharacters.length; i++) {
                     byteNumbers[i] = byteCharacters.charCodeAt(i);
@@ -87,12 +88,12 @@ const RelatedDocumentViewer: React.FC<{
                     'md': 'text/markdown'
                   };
                   
-                  const mimeType = mimeTypes[content.format] || 'application/octet-stream';
+                  const mimeType = mimeTypes[docData.format] || 'application/octet-stream';
                   const blob = new Blob([byteArray], { type: mimeType });
                   const url = window.URL.createObjectURL(blob);
                   const link = window.document.createElement('a');
                   link.href = url;
-                  link.download = `${content.name}.${content.format}`;
+                  link.download = `${docData.name}.${docData.format}`;
                   window.document.body.appendChild(link);
                   link.click();
                   window.document.body.removeChild(link);
