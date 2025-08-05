@@ -28,7 +28,8 @@ logger.setLevel(logging.INFO)
 
 def _sanitize_filename(filename: str) -> str:
     """
-    Sanitize filename to comply with AWS Bedrock document restrictions:
+    Sanitize filename to comply with AWS Bedrock document restrictions.
+    This matches the _convert_to_valid_file_name function in conversation.py:
     - Only alphanumeric characters, whitespace characters, hyphens, parentheses, and square brackets
     - No more than one consecutive whitespace character
     """
@@ -122,9 +123,9 @@ def _generate_excel(tool_input: ExcelGeneratorInput, bot: BotModel | None, model
         wb.save(excel_buffer)
         excel_buffer.seek(0)
         
-        # Create filename with proper sanitization
+        # Create filename with proper sanitization (name should not include extension)
         sanitized_title = _sanitize_filename(tool_input.title)
-        filename = f"{sanitized_title}.xlsx"
+        filename = sanitized_title
         
         return DocumentToolResultModel(
             format="xls",
@@ -216,9 +217,9 @@ def _generate_word(tool_input: WordGeneratorInput, bot: BotModel | None, model: 
         doc.save(word_buffer)
         word_buffer.seek(0)
         
-        # Create filename with proper sanitization
+        # Create filename with proper sanitization (name should not include extension)
         sanitized_title = _sanitize_filename(tool_input.title)
-        filename = f"{sanitized_title}.docx"
+        filename = sanitized_title
         
         return DocumentToolResultModel(
             format="docx",
@@ -301,9 +302,9 @@ def _generate_powerpoint(tool_input: PowerPointGeneratorInput, bot: BotModel | N
 </html>
 """
         
-        # Create filename with proper sanitization
+        # Create filename with proper sanitization (name should not include extension)
         sanitized_title = _sanitize_filename(tool_input.title)
-        filename = f"{sanitized_title} presentation.html"
+        filename = f"{sanitized_title} presentation"
         
         return DocumentToolResultModel(
             format="html",
