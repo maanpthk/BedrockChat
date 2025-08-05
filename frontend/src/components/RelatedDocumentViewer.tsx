@@ -51,6 +51,56 @@ const RelatedDocumentViewer: React.FC<{
             invertTheme={false} // disable dark theme
           />
         )}
+        {'document' in content && (
+          <div className="flex flex-col items-center space-y-4 p-4">
+            <div className="text-lg font-semibold">
+              📄 {content.name}.{content.format}
+            </div>
+            <div className="text-sm text-gray-400">
+              Document ready for download
+            </div>
+            <button
+              className="px-4 py-2 bg-aws-sea-blue-light text-white rounded hover:bg-aws-sea-blue-hover-light dark:bg-aws-sea-blue-dark dark:hover:bg-aws-sea-blue-hover-dark"
+              onClick={() => {
+                try {
+                  const byteCharacters = atob(content.document);
+                  const byteNumbers = new Array(byteCharacters.length);
+                  for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                  }
+                  const byteArray = new Uint8Array(byteNumbers);
+                  
+                  const mimeTypes: { [key: string]: string } = {
+                    'xls': 'application/vnd.ms-excel',
+                    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'doc': 'application/msword',
+                    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'html': 'text/html',
+                    'pdf': 'application/pdf',
+                    'txt': 'text/plain',
+                    'csv': 'text/csv',
+                    'md': 'text/markdown'
+                  };
+                  
+                  const mimeType = mimeTypes[content.format] || 'application/octet-stream';
+                  const blob = new Blob([byteArray], { type: mimeType });
+                  const url = window.URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = `${content.name}.${content.format}`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  window.URL.revokeObjectURL(url);
+                } catch (error) {
+                  console.error('Error downloading file:', error);
+                }
+              }}
+            >
+              Download File
+            </button>
+          </div>
+        )}
 
         {(sourceName || sourceLink) && (
           <div className="my-1 border-t pt-1 italic">

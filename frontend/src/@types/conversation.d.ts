@@ -66,9 +66,16 @@ export type AgentToolResultJsonContent = {
   json: { [key: string]: any }; // eslint-disable-line @typescript-eslint/no-explicit-any
 };
 
+export type AgentToolResultDocumentContent = {
+  format: string;
+  name: string;
+  document: string; // base64 encoded document
+};
+
 export type AgentToolResultContent =
   | AgentToolResultTextContent
-  | AgentToolResultJsonContent;
+  | AgentToolResultJsonContent
+  | AgentToolResultDocumentContent;
 
 export type ToolResultContentBody = {
   toolUseId: string;

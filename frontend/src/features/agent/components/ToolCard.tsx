@@ -202,6 +202,53 @@ const ToolCard: React.FC<ToolCardProps> = ({
             shouldExpandNodeInitially={() => false}
           />
         )}
+        {'document' in document.content && (
+          <div className="flex items-center space-x-2">
+            <div className="break-all line-clamp-1 dark:text-aws-font-color-dark">
+              📄 {document.content.name}.{document.content.format}
+            </div>
+            <button
+              className="px-3 py-1 text-xs bg-aws-sea-blue-light text-white rounded hover:bg-aws-sea-blue-hover-light dark:bg-aws-sea-blue-dark dark:hover:bg-aws-sea-blue-hover-dark"
+              onClick={() => {
+                try {
+                  const byteCharacters = atob(document.content.document);
+                  const byteNumbers = new Array(byteCharacters.length);
+                  for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                  }
+                  const byteArray = new Uint8Array(byteNumbers);
+                  
+                  const mimeTypes: { [key: string]: string } = {
+                    'xls': 'application/vnd.ms-excel',
+                    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'doc': 'application/msword',
+                    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'html': 'text/html',
+                    'pdf': 'application/pdf',
+                    'txt': 'text/plain',
+                    'csv': 'text/csv',
+                    'md': 'text/markdown'
+                  };
+                  
+                  const mimeType = mimeTypes[document.content.format] || 'application/octet-stream';
+                  const blob = new Blob([byteArray], { type: mimeType });
+                  const url = window.URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = `${document.content.name}.${document.content.format}`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  window.URL.revokeObjectURL(url);
+                } catch (error) {
+                  console.error('Error downloading file:', error);
+                }
+              }}
+            >
+              Download
+            </button>
+          </div>
+        )}
       </div>
     );
   };
