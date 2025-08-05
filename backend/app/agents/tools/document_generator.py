@@ -7,7 +7,8 @@ from datetime import datetime
 
 from app.agents.tools.agent_tool import AgentTool
 from app.repositories.models.custom_bot import BotModel
-from app.routes.schemas.conversation import type_model_name, DocumentToolResult
+from app.repositories.models.conversation import DocumentToolResultModel
+from app.routes.schemas.conversation import type_model_name
 from pydantic import BaseModel, Field
 
 # Document generation libraries
@@ -41,7 +42,7 @@ class PowerPointGeneratorInput(BaseModel):
     slides: List[Dict[str, Any]] = Field(description="Slide content. Each dict should have 'title' and 'content' (list of bullet points or paragraphs)")
 
 
-def _generate_excel(tool_input: ExcelGeneratorInput, bot: BotModel | None, model: type_model_name | None) -> DocumentToolResult:
+def _generate_excel(tool_input: ExcelGeneratorInput, bot: BotModel | None, model: type_model_name | None) -> DocumentToolResultModel:
     """Generate an Excel file from the provided data."""
     try:
         logger.info(f"Generating Excel document: {tool_input.title}")
@@ -101,7 +102,7 @@ def _generate_excel(tool_input: ExcelGeneratorInput, bot: BotModel | None, model
         # Create filename
         filename = f"{tool_input.title.replace(' ', '_')}.xlsx"
         
-        return DocumentToolResult(
+        return DocumentToolResultModel(
             format="xls",
             name=filename,
             document=excel_buffer.getvalue()
@@ -112,7 +113,7 @@ def _generate_excel(tool_input: ExcelGeneratorInput, bot: BotModel | None, model
         raise e
 
 
-def _generate_word(tool_input: WordGeneratorInput, bot: BotModel | None, model: type_model_name | None) -> DocumentToolResult:
+def _generate_word(tool_input: WordGeneratorInput, bot: BotModel | None, model: type_model_name | None) -> DocumentToolResultModel:
     """Generate a Word document from the provided content."""
     try:
         logger.info(f"Generating Word document: {tool_input.title}")
@@ -194,7 +195,7 @@ def _generate_word(tool_input: WordGeneratorInput, bot: BotModel | None, model: 
         # Create filename
         filename = f"{tool_input.title.replace(' ', '_')}.docx"
         
-        return DocumentToolResult(
+        return DocumentToolResultModel(
             format="docx",
             name=filename,
             document=word_buffer.getvalue()
@@ -205,7 +206,7 @@ def _generate_word(tool_input: WordGeneratorInput, bot: BotModel | None, model: 
         raise e
 
 
-def _generate_powerpoint(tool_input: PowerPointGeneratorInput, bot: BotModel | None, model: type_model_name | None) -> DocumentToolResult:
+def _generate_powerpoint(tool_input: PowerPointGeneratorInput, bot: BotModel | None, model: type_model_name | None) -> DocumentToolResultModel:
     """Generate a PowerPoint presentation as HTML format (since pptx is not supported by DocumentToolResult)."""
     try:
         logger.info(f"Generating PowerPoint presentation as HTML: {tool_input.title}")
@@ -278,7 +279,7 @@ def _generate_powerpoint(tool_input: PowerPointGeneratorInput, bot: BotModel | N
         # Create filename
         filename = f"{tool_input.title.replace(' ', '_')}_presentation.html"
         
-        return DocumentToolResult(
+        return DocumentToolResultModel(
             format="html",
             name=filename,
             document=html_content.encode('utf-8')
