@@ -203,20 +203,20 @@ const ToolCard: React.FC<ToolCardProps> = ({
           />
         )}
         {'json' in document.content && 
-         document.content.json && 
-         typeof document.content.json === 'object' && 
-         'format' in document.content.json && 
-         'name' in document.content.json && 
-         'document' in document.content.json && (
+         (document.content as any).json && 
+         typeof (document.content as any).json === 'object' && 
+         'format' in (document.content as any).json && 
+         'name' in (document.content as any).json && 
+         'document' in (document.content as any).json && (
           <div className="flex items-center space-x-2">
             <div className="break-all line-clamp-1 dark:text-aws-font-color-dark">
-              📄 {document.content.json.name}.{document.content.json.format}
+              📄 {(document.content as any).json.name}.{(document.content as any).json.format}
             </div>
             <button
               className="px-3 py-1 text-xs bg-aws-sea-blue-light text-white rounded hover:bg-aws-sea-blue-hover-light dark:bg-aws-sea-blue-dark dark:hover:bg-aws-sea-blue-hover-dark"
               onClick={() => {
                 try {
-                  const docData = document.content.json;
+                  const docData = (document.content as any).json;
                   const byteCharacters = atob(docData.document);
                   const byteNumbers = new Array(byteCharacters.length);
                   for (let i = 0; i < byteCharacters.length; i++) {

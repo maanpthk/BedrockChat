@@ -52,14 +52,14 @@ const RelatedDocumentViewer: React.FC<{
           />
         )}
         {'json' in content && 
-         content.json && 
-         typeof content.json === 'object' && 
-         'format' in content.json && 
-         'name' in content.json && 
-         'document' in content.json && (
+         (content as any).json && 
+         typeof (content as any).json === 'object' && 
+         'format' in (content as any).json && 
+         'name' in (content as any).json && 
+         'document' in (content as any).json && (
           <div className="flex flex-col items-center space-y-4 p-4">
             <div className="text-lg font-semibold">
-              📄 {content.json.name}.{content.json.format}
+              📄 {(content as any).json.name}.{(content as any).json.format}
             </div>
             <div className="text-sm text-gray-400">
               Document ready for download
@@ -68,7 +68,7 @@ const RelatedDocumentViewer: React.FC<{
               className="px-4 py-2 bg-aws-sea-blue-light text-white rounded hover:bg-aws-sea-blue-hover-light dark:bg-aws-sea-blue-dark dark:hover:bg-aws-sea-blue-hover-dark"
               onClick={() => {
                 try {
-                  const docData = content.json;
+                  const docData = (content as any).json;
                   const byteCharacters = atob(docData.document);
                   const byteNumbers = new Array(byteCharacters.length);
                   for (let i = 0; i < byteCharacters.length; i++) {
