@@ -107,6 +107,59 @@ const RelatedDocumentViewer: React.FC<{
             </button>
           </div>
         )}
+        {'json' in content && 
+         (content as any).json && 
+         typeof (content as any).json === 'object' && 
+         'media_type' in (content as any).json && 
+         'image_data' in (content as any).json && 
+         (content as any).json.media_type === 'image' && (
+          <div className="flex flex-col items-center space-y-4 p-4">
+            <div className="text-lg font-semibold">
+              🖼️ Generated Image
+            </div>
+            <img 
+              src={`data:image/png;base64,${(content as any).json.image_data}`}
+              alt="Generated image"
+              className="max-w-full max-h-[60vh] object-contain rounded-lg border border-gray-300 dark:border-gray-600"
+            />
+            {props.relatedDocument.sourceLink && (
+              <button
+                className="px-4 py-2 bg-aws-sea-blue-light text-white rounded hover:bg-aws-sea-blue-hover-light dark:bg-aws-sea-blue-dark dark:hover:bg-aws-sea-blue-hover-dark"
+                onClick={() => window.open(props.relatedDocument.sourceLink, '_blank')}
+              >
+                Download Image
+              </button>
+            )}
+          </div>
+        )}
+        {'json' in content && 
+         (content as any).json && 
+         typeof (content as any).json === 'object' && 
+         'media_type' in (content as any).json && 
+         (content as any).json.media_type === 'video' && (
+          <div className="flex flex-col items-center space-y-4 p-4">
+            <div className="text-lg font-semibold">
+              🎥 Generated Video
+            </div>
+            {props.relatedDocument.sourceLink && (
+              <video 
+                controls
+                className="max-w-full max-h-[60vh] rounded-lg border border-gray-300 dark:border-gray-600"
+              >
+                <source src={props.relatedDocument.sourceLink} type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+            )}
+            {props.relatedDocument.sourceLink && (
+              <button
+                className="px-4 py-2 bg-aws-sea-blue-light text-white rounded hover:bg-aws-sea-blue-hover-light dark:bg-aws-sea-blue-dark dark:hover:bg-aws-sea-blue-hover-dark"
+                onClick={() => window.open(props.relatedDocument.sourceLink, '_blank')}
+              >
+                Download Video
+              </button>
+            )}
+          </div>
+        )}
 
         {(sourceName || sourceLink) && (
           <div className="my-1 border-t pt-1 italic">

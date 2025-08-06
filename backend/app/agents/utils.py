@@ -9,6 +9,10 @@ from app.agents.tools.document_generator import (
     word_generator_tool,
     powerpoint_generator_tool,
 )
+from app.agents.tools.nova_generation import (
+    nova_canvas_tool,
+    nova_reel_tool,
+)
 from app.repositories.models.custom_bot import BotModel
 import logging
 
@@ -23,6 +27,8 @@ def get_available_tools() -> list[AgentTool]:
     tools.append(excel_generator_tool)
     tools.append(word_generator_tool)
     tools.append(powerpoint_generator_tool)
+    tools.append(nova_canvas_tool)
+    tools.append(nova_reel_tool)
     return tools
 
 

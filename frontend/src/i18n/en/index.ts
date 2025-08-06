@@ -189,6 +189,26 @@ const translation = {
           name: 'Bedrock Agent',
           description: 'Ask a question to the configured Bedrock Agent',
         },
+        excel_generator: {
+          name: 'Excel Generator',
+          description: 'Generate Excel spreadsheets with data and formatting.',
+        },
+        word_generator: {
+          name: 'Word Generator',
+          description: 'Generate Word documents with formatted content.',
+        },
+        powerpoint_generator: {
+          name: 'PowerPoint Generator',
+          description: 'Generate PowerPoint presentations with slides.',
+        },
+        nova_canvas: {
+          name: 'Nova Canvas',
+          description: 'Generate images from text prompts using Amazon Nova Canvas.',
+        },
+        nova_reel: {
+          name: 'Nova Reel',
+          description: 'Generate short videos from text prompts using Amazon Nova Reel.',
+        },
         firecrawl: {
           apiKey: 'Firecrawl API Key',
           maxResults: 'Maximum Results',

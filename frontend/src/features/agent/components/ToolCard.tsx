@@ -257,6 +257,61 @@ const ToolCard: React.FC<ToolCardProps> = ({
             </button>
           </div>
         )}
+        {'json' in document.content && 
+         (document.content as any).json && 
+         typeof (document.content as any).json === 'object' && 
+         'media_type' in (document.content as any).json && 
+         'image_data' in (document.content as any).json && 
+         (document.content as any).json.media_type === 'image' && (
+          <div className="flex flex-col space-y-2">
+            <img 
+              src={`data:image/png;base64,${(document.content as any).json.image_data}`}
+              alt="Generated image"
+              className="max-w-full h-auto rounded-lg border border-gray-300 dark:border-gray-600"
+              style={{ maxHeight: '400px', objectFit: 'contain' }}
+            />
+            {document.sourceLink && (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600 dark:text-gray-400">🖼️ Generated Image</span>
+                <button
+                  className="px-3 py-1 text-xs bg-aws-sea-blue-light text-white rounded hover:bg-aws-sea-blue-hover-light dark:bg-aws-sea-blue-dark dark:hover:bg-aws-sea-blue-hover-dark"
+                  onClick={() => window.open(document.sourceLink, '_blank')}
+                >
+                  Download
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        {'json' in document.content && 
+         (document.content as any).json && 
+         typeof (document.content as any).json === 'object' && 
+         'media_type' in (document.content as any).json && 
+         (document.content as any).json.media_type === 'video' && (
+          <div className="flex flex-col space-y-2">
+            {document.sourceLink && (
+              <video 
+                controls
+                className="max-w-full h-auto rounded-lg border border-gray-300 dark:border-gray-600"
+                style={{ maxHeight: '400px' }}
+              >
+                <source src={document.sourceLink} type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+            )}
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600 dark:text-gray-400">🎥 Generated Video</span>
+              {document.sourceLink && (
+                <button
+                  className="px-3 py-1 text-xs bg-aws-sea-blue-light text-white rounded hover:bg-aws-sea-blue-hover-light dark:bg-aws-sea-blue-dark dark:hover:bg-aws-sea-blue-hover-dark"
+                  onClick={() => window.open(document.sourceLink, '_blank')}
+                >
+                  Download
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
