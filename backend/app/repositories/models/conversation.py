@@ -721,24 +721,28 @@ class RelatedDocumentModel(BaseModel):
     def to_tool_result_model(self, display_citation: bool) -> ToolResultModel:
         if isinstance(self.content, TextToolResultModel):
             if display_citation:
-                return JsonToolResultModel(
-                    json={
-                        "source_id": self.source_id,
-                        "content": self.content.text,
-                    },
-                )
+                json_result = {
+                    "source_id": self.source_id,
+                    "content": self.content.text,
+                }
+                # Include source_link if available
+                if self.source_link:
+                    json_result["source_link"] = self.source_link
+                return JsonToolResultModel(json=json_result)
 
             else:
                 return self.content
 
         elif isinstance(self.content, JsonToolResultModel):
             if display_citation:
-                return JsonToolResultModel(
-                    json={
-                        "source_id": self.source_id,
-                        "content": self.content.json_,
-                    },
-                )
+                json_result = {
+                    "source_id": self.source_id,
+                    "content": self.content.json_,
+                }
+                # Include source_link if available
+                if self.source_link:
+                    json_result["source_link"] = self.source_link
+                return JsonToolResultModel(json=json_result)
 
             else:
                 return self.content

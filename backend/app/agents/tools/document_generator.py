@@ -210,12 +210,17 @@ def _generate_excel(tool_input: ExcelGeneratorInput, bot: BotModel | None, model
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
         
+        logger.info(f"Generated presigned URL for Excel: {download_url}")
+        
         # Return result with download link
-        return {
-            "content": f"Excel document '{sanitized_title}' has been generated successfully with {len(tool_input.data)} rows of data. The file contains columns: {', '.join(tool_input.data[0].keys()) if tool_input.data else 'No data'}.",
+        result = {
+            "content": f"Excel document '{sanitized_title}' has been generated successfully with {len(tool_input.data)} rows of data. The file contains columns: {', '.join(tool_input.data[0].keys()) if tool_input.data else 'No data'}. Download URL: {download_url}",
             "source_name": filename,
             "source_link": download_url
         }
+        
+        logger.info(f"Returning Excel result: {result}")
+        return result
         
     except Exception as e:
         logger.error(f"Error generating Excel document: {e}")
@@ -312,12 +317,17 @@ def _generate_word(tool_input: WordGeneratorInput, bot: BotModel | None, model: 
             content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
         
+        logger.info(f"Generated presigned URL for Word: {download_url}")
+        
         # Return result with download link
-        return {
-            "content": f"Word document '{sanitized_title}' has been generated successfully with {len(tool_input.content)} content sections including headings, paragraphs, and lists.",
+        result = {
+            "content": f"Word document '{sanitized_title}' has been generated successfully with {len(tool_input.content)} content sections including headings, paragraphs, and lists. Download URL: {download_url}",
             "source_name": filename,
             "source_link": download_url
         }
+        
+        logger.info(f"Returning Word result: {result}")
+        return result
         
     except Exception as e:
         logger.error(f"Error generating Word document: {e}")
@@ -405,12 +415,17 @@ def _generate_powerpoint(tool_input: PowerPointGeneratorInput, bot: BotModel | N
             content_type="text/html"
         )
         
+        logger.info(f"Generated presigned URL for PowerPoint: {download_url}")
+        
         # Return result with download link
-        return {
-            "content": f"PowerPoint presentation '{sanitized_title}' has been generated successfully with {len(tool_input.slides)} slides. The presentation includes a title slide and content slides with bullet points.",
+        result = {
+            "content": f"PowerPoint presentation '{sanitized_title}' has been generated successfully with {len(tool_input.slides)} slides. The presentation includes a title slide and content slides with bullet points. Download URL: {download_url}",
             "source_name": filename,
             "source_link": download_url
         }
+        
+        logger.info(f"Returning PowerPoint result: {result}")
+        return result
         
     except Exception as e:
         logger.error(f"Error generating PowerPoint presentation: {e}")
