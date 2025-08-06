@@ -335,91 +335,78 @@ def _generate_word(tool_input: WordGeneratorInput, bot: BotModel | None, model: 
 
 
 def _generate_powerpoint(tool_input: PowerPointGeneratorInput, bot: BotModel | None, model: type_model_name | None) -> Dict[str, Any]:
-    """Generate a PowerPoint presentation as HTML format (since pptx is not supported by DocumentToolResult)."""
+    """Generate a PowerPoint presentation using python-pptx."""
     try:
-        logger.info(f"Generating PowerPoint presentation as HTML: {tool_input.title}")
+        logger.info(f"Generating PowerPoint presentation: {tool_input.title}")
         
-        # Generate HTML presentation
-        html_content = f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <title>{tool_input.title}</title>
-    <style>
-        body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }}
-        .slide {{ 
-            background: white; 
-            margin: 20px 0; 
-            padding: 40px; 
-            border-radius: 8px; 
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            page-break-after: always;
-        }}
-        .slide-title {{ 
-            font-size: 28px; 
-            font-weight: bold; 
-            color: #333; 
-            margin-bottom: 20px; 
-            border-bottom: 3px solid #007acc;
-            padding-bottom: 10px;
-        }}
-        .slide-content {{ font-size: 18px; line-height: 1.6; }}
-        .slide-content ul {{ margin: 10px 0; }}
-        .slide-content li {{ margin: 8px 0; }}
-        .title-slide {{ text-align: center; }}
-        .title-slide h1 {{ font-size: 36px; color: #007acc; margin-bottom: 20px; }}
-        .title-slide p {{ font-size: 20px; color: #666; }}
-        @media print {{ .slide {{ page-break-after: always; }} }}
-    </style>
-</head>
-<body>
-    <div class="slide title-slide">
-        <h1>{tool_input.title}</h1>
-        <p>Generated on {datetime.now().strftime('%Y-%m-%d')}</p>
-    </div>
-"""
+        # Create presentation
+        prs = Presentation()
+        
+        # Set slide dimensions (16:9 aspect ratio)
+        prs.slide_width = PptxInches(13.33)
+        prs.slide_height = PptxInches(7.5)
+        
+        # Add title slide
+        title_slide_layout = prs.slide_layouts[0]  # Title slide layout
+        title_slide = prs.slides.add_slide(title_slide_layout)
+        
+        # Set title and subtitle
+        title_slide.shapes.title.text = tool_input.title
+        if title_slide.shapes.placeholders[1]:  # Subtitle placeholder
+            title_slide.shapes.placeholders[1].text = f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         
         # Add content slides
         for slide_data in tool_input.slides:
             slide_title = slide_data.get('title', 'Slide')
             content = slide_data.get('content', [])
             
-            html_content += f"""
-    <div class="slide">
-        <div class="slide-title">{slide_title}</div>
-        <div class="slide-content">
-            <ul>
-"""
+            # Use bullet slide layout
+            bullet_slide_layout = prs.slide_layouts[1]  # Title and Content layout
+            slide = prs.slides.add_slide(bullet_slide_layout)
             
-            for item in content:
-                html_content += f"                <li>{str(item)}</li>\n"
+            # Set slide title
+            slide.shapes.title.text = slide_title
             
-            html_content += """            </ul>
-        </div>
-    </div>
-"""
+            # Add content to the content placeholder
+            if slide.shapes.placeholders[1]:  # Content placeholder
+                content_placeholder = slide.shapes.placeholders[1]
+                text_frame = content_placeholder.text_frame
+                text_frame.clear()  # Clear default text
+                
+                # Add bullet points
+                for i, item in enumerate(content):
+                    if i == 0:
+                        # First paragraph (already exists)
+                        p = text_frame.paragraphs[0]
+                    else:
+                        # Add new paragraphs for subsequent items
+                        p = text_frame.add_paragraph()
+                    
+                    p.text = str(item)
+                    p.level = 0  # Top level bullet
+                    p.alignment = PP_ALIGN.LEFT
         
-        html_content += """
-</body>
-</html>
-"""
+        # Save to bytes
+        pptx_buffer = io.BytesIO()
+        prs.save(pptx_buffer)
+        pptx_buffer.seek(0)
         
         # Create filename with proper sanitization
         sanitized_title = _sanitize_filename(tool_input.title)
-        filename = f"{sanitized_title}_presentation.html"
+        filename = f"{sanitized_title}.pptx"
         
         # Upload to S3 and get download URL
         download_url = _upload_document_to_s3(
-            document_data=html_content.encode('utf-8'),
+            document_data=pptx_buffer.getvalue(),
             filename=filename,
-            content_type="text/html"
+            content_type="application/vnd.openxmlformats-officedocument.presentationml.presentation"
         )
         
         logger.info(f"Generated presigned URL for PowerPoint: {download_url}")
         
         # Return result with download link
         result = {
-            "content": f"PowerPoint presentation '{sanitized_title}' has been generated successfully with {len(tool_input.slides)} slides. The presentation includes a title slide and content slides with bullet points. Download URL: {download_url}",
+            "content": f"PowerPoint presentation '{sanitized_title}' has been generated successfully with {len(tool_input.slides) + 1} slides (including title slide). The presentation includes a title slide and {len(tool_input.slides)} content slides with bullet points. Download URL: {download_url}",
             "source_name": filename,
             "source_link": download_url
         }
