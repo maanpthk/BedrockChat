@@ -120,6 +120,30 @@ const translation = {
           name: 'Truy xuất Kiến thức',
           description: 'Truy xuất thông tin từ kiến thức.',
         },
+        bedrock_agent: {
+          name: 'Tác nhân Bedrock',
+          description: 'Đặt câu hỏi cho Tác nhân Bedrock đã được cấu hình.',
+        },
+        excel_generator: {
+          name: 'Trình tạo Excel',
+          description: 'Tạo bảng tính Excel với dữ liệu và định dạng.',
+        },
+        word_generator: {
+          name: 'Trình tạo Word',
+          description: 'Tạo tài liệu Word với nội dung được định dạng.',
+        },
+        powerpoint_generator: {
+          name: 'Trình tạo PowerPoint',
+          description: 'Tạo bài thuyết trình PowerPoint với các slide.',
+        },
+        nova_canvas: {
+          name: 'Nova Canvas',
+          description: 'Tạo hình ảnh từ lời nhắc văn bản bằng Amazon Nova Canvas.',
+        },
+        nova_reel: {
+          name: 'Nova Reel',
+          description: 'Tạo video ngắn từ lời nhắc văn bản bằng Amazon Nova Reel.',
+        },
       },
     },
     bot: {

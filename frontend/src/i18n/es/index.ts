@@ -97,6 +97,34 @@ const translation = {
           name: 'Búsqueda en Internet',
           description: 'Buscar información en internet.',
         },
+        knowledge_base_tool: {
+          name: 'Recuperar Conocimiento',
+          description: 'Recuperar información del conocimiento.',
+        },
+        bedrock_agent: {
+          name: 'Agente Bedrock',
+          description: 'Hacer una pregunta al Agente Bedrock configurado.',
+        },
+        excel_generator: {
+          name: 'Generador de Excel',
+          description: 'Generar hojas de cálculo Excel con datos y formato.',
+        },
+        word_generator: {
+          name: 'Generador de Word',
+          description: 'Generar documentos Word con contenido formateado.',
+        },
+        powerpoint_generator: {
+          name: 'Generador de PowerPoint',
+          description: 'Generar presentaciones PowerPoint con diapositivas.',
+        },
+        nova_canvas: {
+          name: 'Nova Canvas',
+          description: 'Generar imágenes a partir de prompts de texto usando Amazon Nova Canvas.',
+        },
+        nova_reel: {
+          name: 'Nova Reel',
+          description: 'Generar videos cortos a partir de prompts de texto usando Amazon Nova Reel.',
+        },
       },
     },
     bot: {

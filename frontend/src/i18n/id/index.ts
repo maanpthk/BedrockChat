@@ -121,6 +121,30 @@ const translation = {
           name: 'Ambil Pengetahuan',
           description: 'Mengambil informasi dari Pengetahuan.',
         },
+        bedrock_agent: {
+          name: 'Agen Bedrock',
+          description: 'Ajukan pertanyaan kepada Agen Bedrock yang dikonfigurasi.',
+        },
+        excel_generator: {
+          name: 'Generator Excel',
+          description: 'Menghasilkan spreadsheet Excel dengan data dan format.',
+        },
+        word_generator: {
+          name: 'Generator Word',
+          description: 'Menghasilkan dokumen Word dengan konten yang diformat.',
+        },
+        powerpoint_generator: {
+          name: 'Generator PowerPoint',
+          description: 'Menghasilkan presentasi PowerPoint dengan slide.',
+        },
+        nova_canvas: {
+          name: 'Nova Canvas',
+          description: 'Menghasilkan gambar dari prompt teks menggunakan Amazon Nova Canvas.',
+        },
+        nova_reel: {
+          name: 'Nova Reel',
+          description: 'Menghasilkan video pendek dari prompt teks menggunakan Amazon Nova Reel.',
+        },
       },
     },
     bot: {

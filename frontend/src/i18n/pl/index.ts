@@ -118,6 +118,30 @@ const translation = {
           name: 'Pobierz Wiedzę',
           description: 'Pobierz informacje z Bazy Wiedzy.',
         },
+        bedrock_agent: {
+          name: 'Agent Bedrock',
+          description: 'Zadaj pytanie skonfigurowanemu Agentowi Bedrock.',
+        },
+        excel_generator: {
+          name: 'Generator Excel',
+          description: 'Generuj arkusze kalkulacyjne Excel z danymi i formatowaniem.',
+        },
+        word_generator: {
+          name: 'Generator Word',
+          description: 'Generuj dokumenty Word z sformatowaną zawartością.',
+        },
+        powerpoint_generator: {
+          name: 'Generator PowerPoint',
+          description: 'Generuj prezentacje PowerPoint ze slajdami.',
+        },
+        nova_canvas: {
+          name: 'Nova Canvas',
+          description: 'Generuj obrazy z promptów tekstowych używając Amazon Nova Canvas.',
+        },
+        nova_reel: {
+          name: 'Nova Reel',
+          description: 'Generuj krótkie filmy z promptów tekstowych używając Amazon Nova Reel.',
+        },
       },
     },
     bot: {

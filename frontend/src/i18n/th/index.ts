@@ -117,6 +117,30 @@ const translation = {
           name: 'ดึงข้อมูลความรู้',
           description: 'ดึงข้อมูลจากความรู้',
         },
+        bedrock_agent: {
+          name: 'Bedrock Agent',
+          description: 'ส่งคำถามไปยัง Bedrock Agent ที่กำหนดค่าไว้',
+        },
+        excel_generator: {
+          name: 'เครื่องมือสร้าง Excel',
+          description: 'สร้างสเปรดชีต Excel พร้อมข้อมูลและการจัดรูปแบบ',
+        },
+        word_generator: {
+          name: 'เครื่องมือสร้าง Word',
+          description: 'สร้างเอกสาร Word พร้อมเนื้อหาที่จัดรูปแบบแล้ว',
+        },
+        powerpoint_generator: {
+          name: 'เครื่องมือสร้าง PowerPoint',
+          description: 'สร้างงานนำเสนอ PowerPoint พร้อมสไลด์',
+        },
+        nova_canvas: {
+          name: 'Nova Canvas',
+          description: 'สร้างภาพจากข้อความโดยใช้ Amazon Nova Canvas',
+        },
+        nova_reel: {
+          name: 'Nova Reel',
+          description: 'สร้างวิดีโอสั้นจากข้อความโดยใช้ Amazon Nova Reel',
+        },
       },
     },
     bot: {

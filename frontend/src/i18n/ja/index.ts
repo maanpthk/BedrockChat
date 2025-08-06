@@ -190,6 +190,26 @@ const translation: typeof en = {
           name: 'Bedrock Agent',
           description: '設定されたBedrock Agentに質問を送信します。',
         },
+        excel_generator: {
+          name: 'Excel生成',
+          description: 'データと書式を含むExcelスプレッドシートを生成します。',
+        },
+        word_generator: {
+          name: 'Word生成',
+          description: '書式設定されたコンテンツを含むWordドキュメントを生成します。',
+        },
+        powerpoint_generator: {
+          name: 'PowerPoint生成',
+          description: 'スライドを含むPowerPointプレゼンテーションを生成します。',
+        },
+        nova_canvas: {
+          name: 'Nova Canvas',
+          description: 'Amazon Nova Canvasを使用してテキストプロンプトから画像を生成します。',
+        },
+        nova_reel: {
+          name: 'Nova Reel',
+          description: 'Amazon Nova Reelを使用してテキストプロンプトから短い動画を生成します。',
+        },
         firecrawl: {
           apiKey: 'Firecrawl APIキー',
           maxResults: '最大結果数',
