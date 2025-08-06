@@ -313,7 +313,11 @@ const ToolCard: React.FC<ToolCardProps> = ({
                 <ul className="list-disc">
                   {Object.entries(input).map(([key, value]) => (
                     <li key={key}>
-                      <span className="font-semibold">{key}:</span> {value}
+                      <span className="font-semibold">{key}:</span> {
+                        typeof value === 'object' && value !== null 
+                          ? JSON.stringify(value, null, 2)
+                          : String(value)
+                      }
                     </li>
                   ))}
                 </ul>
