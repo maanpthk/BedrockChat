@@ -103,6 +103,7 @@ const ToolCard: React.FC<ToolCardProps> = ({
                   },
                   sourceId: `${toolUseId}@${index}`,
                   sourceName: name,
+                  sourceLink: content.source_link || undefined,
                 };
               } else {
                 return {
@@ -121,6 +122,7 @@ const ToolCard: React.FC<ToolCardProps> = ({
               },
               sourceId: toolUseId,
               sourceName: name,
+              sourceLink: json.source_link || undefined,
             }];
           } else {
             documents = [{

@@ -756,15 +756,18 @@ class RelatedDocumentModel(BaseModel):
 
         url = urlparse(url=self.source_link)
         if url.scheme == "s3":
+            # Handle S3 URLs by generating presigned URLs
             source_link = generate_presigned_url(
                 bucket=url.netloc,
                 key=url.path.removeprefix("/"),
                 client_method="get_object",
             )
             return source_link
-
+        elif url.scheme in ["http", "https"]:
+            # Return HTTPS URLs as-is (already presigned URLs from document generator)
+            return self.source_link
         else:
-            # Return the source as is for knowledge base references
+            # Return the source as is for knowledge base references or other schemes
             return self.source_link
 
     def to_schema(self) -> RelatedDocument:
