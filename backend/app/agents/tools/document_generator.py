@@ -3,12 +3,16 @@ import json
 import io
 import base64
 import re
+import os
+import uuid
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 
+import boto3
 from app.agents.tools.agent_tool import AgentTool
 from app.repositories.models.custom_bot import BotModel
 from app.routes.schemas.conversation import type_model_name
+from app.utils import generate_presigned_url, BEDROCK_REGION
 from pydantic import BaseModel, Field
 
 # Document generation libraries
@@ -23,6 +27,55 @@ from pptx.enum.text import PP_ALIGN
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+# S3 bucket for document storage - using environment variable or default
+# The bucket name should be set by the CDK deployment
+DOCUMENT_BUCKET = os.environ.get("DOCUMENT_BUCKET", f"bedrock-chat-documents-{os.environ.get('ENV_NAME', 'default')}")
+
+
+def _upload_document_to_s3(document_data: bytes, filename: str, content_type: str) -> str:
+    """
+    Upload document to S3 and return presigned download URL.
+    
+    Args:
+        document_data: Binary document data
+        filename: Name of the file
+        content_type: MIME type of the document
+        
+    Returns:
+        str: Presigned download URL
+    """
+    try:
+        # Generate unique S3 key with timestamp and UUID to avoid conflicts
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        unique_id = str(uuid.uuid4())[:8]
+        s3_key = f"generated_documents/{timestamp}_{unique_id}_{filename}"
+        
+        # Upload to S3
+        s3_client = boto3.client("s3", region_name=BEDROCK_REGION)
+        s3_client.put_object(
+            Bucket=DOCUMENT_BUCKET,
+            Key=s3_key,
+            Body=document_data,
+            ContentType=content_type,
+            # Set expiration for cleanup (30 days)
+            Expires=datetime.now().timestamp() + (30 * 24 * 60 * 60)
+        )
+        
+        # Generate presigned download URL (valid for 24 hours)
+        download_url = generate_presigned_url(
+            bucket=DOCUMENT_BUCKET,
+            key=s3_key,
+            expiration=24 * 60 * 60,  # 24 hours
+            client_method="get_object"
+        )
+        
+        logger.info(f"Document uploaded to S3: {s3_key}")
+        return download_url
+        
+    except Exception as e:
+        logger.error(f"Error uploading document to S3: {e}")
+        raise e
 
 
 def _sanitize_filename(filename: str) -> str:
@@ -122,18 +175,22 @@ def _generate_excel(tool_input: ExcelGeneratorInput, bot: BotModel | None, model
         wb.save(excel_buffer)
         excel_buffer.seek(0)
         
-        # Create filename with proper sanitization (name should not include extension)
+        # Create filename with proper sanitization
         sanitized_title = _sanitize_filename(tool_input.title)
-        filename = sanitized_title
+        filename = f"{sanitized_title}.xlsx"
         
-        # Return as JSON content with base64 encoded document
+        # Upload to S3 and get download URL
+        download_url = _upload_document_to_s3(
+            document_data=excel_buffer.getvalue(),
+            filename=filename,
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+        # Return result with download link
         return {
-            "content": {
-                "format": "xls",
-                "name": filename,
-                "document": base64.b64encode(excel_buffer.getvalue()).decode('utf-8')
-            },
-            "source_name": f"{filename}.xls"
+            "content": f"Excel document '{sanitized_title}' has been generated successfully with {len(tool_input.data)} rows of data. The file contains columns: {', '.join(tool_input.data[0].keys()) if tool_input.data else 'No data'}.",
+            "source_name": filename,
+            "source_link": download_url
         }
         
     except Exception as e:
@@ -220,18 +277,22 @@ def _generate_word(tool_input: WordGeneratorInput, bot: BotModel | None, model: 
         doc.save(word_buffer)
         word_buffer.seek(0)
         
-        # Create filename with proper sanitization (name should not include extension)
+        # Create filename with proper sanitization
         sanitized_title = _sanitize_filename(tool_input.title)
-        filename = sanitized_title
+        filename = f"{sanitized_title}.docx"
         
-        # Return as JSON content with base64 encoded document
+        # Upload to S3 and get download URL
+        download_url = _upload_document_to_s3(
+            document_data=word_buffer.getvalue(),
+            filename=filename,
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+        
+        # Return result with download link
         return {
-            "content": {
-                "format": "docx",
-                "name": filename,
-                "document": base64.b64encode(word_buffer.getvalue()).decode('utf-8')
-            },
-            "source_name": f"{filename}.docx"
+            "content": f"Word document '{sanitized_title}' has been generated successfully with {len(tool_input.content)} content sections including headings, paragraphs, and lists.",
+            "source_name": filename,
+            "source_link": download_url
         }
         
     except Exception as e:
@@ -309,18 +370,22 @@ def _generate_powerpoint(tool_input: PowerPointGeneratorInput, bot: BotModel | N
 </html>
 """
         
-        # Create filename with proper sanitization (name should not include extension)
+        # Create filename with proper sanitization
         sanitized_title = _sanitize_filename(tool_input.title)
-        filename = f"{sanitized_title} presentation"
+        filename = f"{sanitized_title}_presentation.html"
         
-        # Return as JSON content with base64 encoded document
+        # Upload to S3 and get download URL
+        download_url = _upload_document_to_s3(
+            document_data=html_content.encode('utf-8'),
+            filename=filename,
+            content_type="text/html"
+        )
+        
+        # Return result with download link
         return {
-            "content": {
-                "format": "html",
-                "name": filename,
-                "document": base64.b64encode(html_content.encode('utf-8')).decode('utf-8')
-            },
-            "source_name": f"{filename}.html"
+            "content": f"PowerPoint presentation '{sanitized_title}' has been generated successfully with {len(tool_input.slides)} slides. The presentation includes a title slide and content slides with bullet points.",
+            "source_name": filename,
+            "source_link": download_url
         }
         
     except Exception as e:
