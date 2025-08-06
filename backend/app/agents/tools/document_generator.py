@@ -46,13 +46,36 @@ def _upload_document_to_s3(document_data: bytes, filename: str, content_type: st
         str: Presigned download URL
     """
     try:
+        # Log bucket information for debugging
+        logger.info(f"Attempting to upload to bucket: {DOCUMENT_BUCKET}")
+        logger.info(f"Using region: {BEDROCK_REGION}")
+        logger.info(f"ENV_NAME: {os.environ.get('ENV_NAME', 'not_set')}")
+        logger.info(f"DOCUMENT_BUCKET env var: {os.environ.get('DOCUMENT_BUCKET', 'not_set')}")
+        
         # Generate unique S3 key with timestamp and UUID to avoid conflicts
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         unique_id = str(uuid.uuid4())[:8]
         s3_key = f"generated_documents/{timestamp}_{unique_id}_{filename}"
         
-        # Upload to S3
+        # Create S3 client
         s3_client = boto3.client("s3", region_name=BEDROCK_REGION)
+        
+        # First, try to check if bucket exists and is accessible
+        try:
+            s3_client.head_bucket(Bucket=DOCUMENT_BUCKET)
+            logger.info(f"Bucket {DOCUMENT_BUCKET} exists and is accessible")
+        except Exception as bucket_error:
+            logger.error(f"Bucket check failed: {bucket_error}")
+            # List available buckets for debugging
+            try:
+                buckets = s3_client.list_buckets()
+                bucket_names = [bucket['Name'] for bucket in buckets['Buckets']]
+                logger.info(f"Available buckets: {bucket_names}")
+            except Exception as list_error:
+                logger.error(f"Could not list buckets: {list_error}")
+            raise bucket_error
+        
+        # Upload to S3
         s3_client.put_object(
             Bucket=DOCUMENT_BUCKET,
             Key=s3_key,
@@ -70,11 +93,12 @@ def _upload_document_to_s3(document_data: bytes, filename: str, content_type: st
             client_method="get_object"
         )
         
-        logger.info(f"Document uploaded to S3: {s3_key}")
+        logger.info(f"Document uploaded successfully to S3: {s3_key}")
         return download_url
         
     except Exception as e:
         logger.error(f"Error uploading document to S3: {e}")
+        logger.error(f"Bucket: {DOCUMENT_BUCKET}, Region: {BEDROCK_REGION}")
         raise e
 
 
