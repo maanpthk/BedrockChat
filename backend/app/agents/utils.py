@@ -32,16 +32,24 @@ def get_available_tools() -> list[AgentTool]:
     return tools
 
 
-def get_tools(bot: BotModel | None) -> Dict[str, AgentTool]:
+def get_tools(bot: BotModel | None, enable_all_for_normal_chat: bool = False) -> Dict[str, AgentTool]:
     """Get a dictionary of tools based on bot's tool configuration
 
     Args:
         bot: Bot model. Returns an empty dictionary if None
+        enable_all_for_normal_chat: If True, return all available tools when bot is None
 
     Returns:
         Dict[str, AgentTool]: Dictionary where key is tool name and value is tool instance
     """
     tools: Dict[str, AgentTool] = {}
+
+    # NEW: Enable all tools for normal chat when no bot is selected
+    if bot is None and enable_all_for_normal_chat:
+        available_tools = {tool.name: tool for tool in get_available_tools()}
+        # Note: knowledge_base_tool is excluded since it requires bot context
+        available_tools.pop('knowledge_base_tool', None)
+        return available_tools
 
     # Return empty dictionary if bot is None or agent is not enabled
     if not bot or not bot.is_agent_enabled():

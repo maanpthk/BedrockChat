@@ -222,7 +222,9 @@ def chat(
     # # Set tools only when tooluse is supported
     tools: Dict[str, AgentTool] = {}
     if is_tooluse_supported(chat_input.message.model):
-        tools = get_tools(bot)
+        # Enable all tools for normal chat when no bot is selected
+        enable_all_for_normal_chat = bot is None
+        tools = get_tools(bot, enable_all_for_normal_chat=enable_all_for_normal_chat)
 
     display_citation = bot is not None and bot.display_retrieved_chunks
 

@@ -359,12 +359,16 @@ const ChatPage: React.FC = () => {
     );
 
     const tools: AgentToolsProps[] | undefined = useMemo(() => {
+      // Check if this is normal chat with tools enabled (no bot selected)
+      const isNormalChatWithTools = !botId;
+      
       if (isAgentThinking) {
         if (agentThinking.context.tools.length > 0) {
           return agentThinking.context.tools;
         }
 
-        if (bot?.hasAgent) {
+        // Show thinking progress for bot with agent OR normal chat with tools
+        if (bot?.hasAgent || isNormalChatWithTools) {
           return [
             {
               thought: t('agent.progress.label'),
@@ -411,7 +415,7 @@ const ChatPage: React.FC = () => {
 
         return undefined;
       }
-    }, [isAgentThinking, message]);
+    }, [isAgentThinking, message, botId]);
 
     const relatedDocumentsForCitation = useMemo(
       () =>
