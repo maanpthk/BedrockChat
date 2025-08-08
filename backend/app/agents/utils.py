@@ -44,12 +44,24 @@ def get_tools(bot: BotModel | None, enable_all_for_normal_chat: bool = False) ->
     """
     tools: Dict[str, AgentTool] = {}
 
-    # NEW: Enable all tools for normal chat when no bot is selected
+    # NEW: Enable specific tools for normal chat when no bot is selected
     if bot is None and enable_all_for_normal_chat:
+        # Only enable document generation and Nova generation tools for normal chat
+        # Other tools like internet_search, bedrock_agent remain bot-configurable
+        normal_chat_tool_names = [
+            'excel_generator',
+            'word_generator', 
+            'powerpoint_generator',
+            'nova_canvas',
+            'nova_reel'
+        ]
+        
         available_tools = {tool.name: tool for tool in get_available_tools()}
-        # Note: knowledge_base_tool is excluded since it requires bot context
-        available_tools.pop('knowledge_base_tool', None)
-        return available_tools
+        normal_chat_tools = {
+            name: tool for name, tool in available_tools.items() 
+            if name in normal_chat_tool_names
+        }
+        return normal_chat_tools
 
     # Return empty dictionary if bot is None or agent is not enabled
     if not bot or not bot.is_agent_enabled():

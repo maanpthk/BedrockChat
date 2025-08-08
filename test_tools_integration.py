@@ -25,15 +25,23 @@ def test_tools_integration():
     for tool_name in tools_normal_chat.keys():
         print(f"   ✅ {tool_name}")
     
-    # Verify Nova tools are included
-    expected_tools = ['nova_canvas', 'nova_reel', 'excel_generator', 'word_generator', 'powerpoint_generator', 'internet_search']
+    # Verify only document generation and Nova tools are included
+    expected_tools = ['nova_canvas', 'nova_reel', 'excel_generator', 'word_generator', 'powerpoint_generator']
+    excluded_tools = ['internet_search', 'bedrock_agent']
     
-    print(f"\n   Expected Nova and document tools:")
+    print(f"\n   Expected tools for normal chat:")
     for tool in expected_tools:
         if tool in tools_normal_chat:
             print(f"   ✅ {tool} - Available")
         else:
             print(f"   ❌ {tool} - Missing")
+    
+    print(f"\n   Tools that should be excluded (bot-configurable only):")
+    for tool in excluded_tools:
+        if tool not in tools_normal_chat:
+            print(f"   ✅ {tool} - Correctly excluded")
+        else:
+            print(f"   ❌ {tool} - Should be excluded")
     
     # Test 2: Normal chat with tools disabled (default behavior)
     print("\n2. Testing normal chat with tools disabled (default):")
