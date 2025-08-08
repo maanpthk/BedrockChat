@@ -238,6 +238,29 @@ def chat(
         if "instruction" in message_map
         else []
     )
+    
+    # Add system instructions for normal chat with tools
+    if bot is None and tools:
+        normal_chat_instruction = """You are a helpful AI assistant. When responding to user queries:
+
+1. FIRST provide a direct, helpful text response to answer their question or fulfill their request.
+
+2. ONLY use tools when the user explicitly asks for content creation (documents, images, videos) or when a text response alone cannot adequately address their request.
+
+3. For informational queries (like weather, facts, explanations), provide the information directly in text format.
+
+4. After providing a text response, you may optionally suggest creating related documents, images, or presentations if it would be genuinely helpful.
+
+Available tools for content creation:
+- Image generation (for creating visual content)
+- Video generation (for creating short video clips)  
+- Excel spreadsheets (for data tables and reports)
+- Word documents (for formatted text documents)
+- PowerPoint presentations (for slide presentations)
+
+Remember: Always prioritize giving a direct text answer first, then offer additional content creation if relevant."""
+        
+        instructions.append(normal_chat_instruction)
 
     related_documents: list[RelatedDocumentModel] = []
     search_results: list[SearchResult] = []
