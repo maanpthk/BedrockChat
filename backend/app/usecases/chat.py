@@ -247,13 +247,13 @@ def chat(
 
 2. ONLY use tools when the user explicitly asks for content creation (documents, images, videos) or when a text response alone cannot adequately address their request.
 
-3. For informational queries (like weather, facts, explanations), provide the information directly in text format.
+3. For informational queries, provide the information directly in text format.
 
 4. After providing a text response, you may optionally suggest creating related documents, images, or presentations if it would be genuinely helpful.
 
 Available tools for content creation:
 - Image generation (for creating visual content)
-- Video generation (for creating short video clips)  
+- Video generation (for creating video clips - keep prompts under 512 characters)  
 - Excel spreadsheets (for data tables and reports)
 - Word documents (for formatted text documents)
 - PowerPoint presentations (for slide presentations)
