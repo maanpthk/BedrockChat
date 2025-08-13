@@ -264,8 +264,7 @@ Remember: Always prioritize giving a direct text answer first, then offer additi
         
         instructions.append(normal_chat_instruction)
         
-        # Note: We don't add citation instructions for normal chat tools since they're designed for knowledge base results
-        # The tool result integration is handled by the explicit instructions above
+      
 
     related_documents: list[RelatedDocumentModel] = []
     search_results: list[SearchResult] = []
