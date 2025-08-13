@@ -258,9 +258,14 @@ Available tools for content creation:
 - Word documents (for formatted text documents)
 - PowerPoint presentations (for slide presentations)
 
+IMPORTANT: When you use tools to create content (images, videos, documents), you MUST include the download links in your final text response to the user. The tool results will contain a 'source_link' field with the download URL - include this URL in your response so users can access their generated content directly. For example: "I've created your image! You can download it here: [download URL]" or "Your Excel file is ready: [download URL]".
+
 Remember: Always prioritize giving a direct text answer first, then offer additional content creation if relevant."""
         
         instructions.append(normal_chat_instruction)
+        
+        # Note: We don't add citation instructions for normal chat tools since they're designed for knowledge base results
+        # The tool result integration is handled by the explicit instructions above
 
     related_documents: list[RelatedDocumentModel] = []
     search_results: list[SearchResult] = []
