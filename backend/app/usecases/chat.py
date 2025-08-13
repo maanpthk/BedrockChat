@@ -258,7 +258,7 @@ Available tools for content creation:
 - Word documents (for formatted text documents)
 - PowerPoint presentations (for slide presentations)
 
-IMPORTANT: When you use tools to create content (images, videos, documents), you MUST include the download links in your final text response to the user. The tool results will contain a 'source_link' field with the download URL - include this URL in your response so users can access their generated content directly. For example: "I've created your image! You can download it here: [download URL]" or "Your Excel file is ready: [download URL]".
+IMPORTANT: When you use tools to create content (images, videos, documents), you MUST include the s3 download links in your final text response to the user. The tool results will contain a 'source_link' field with the s3 presigned URL - include this URL in your response so users can access their generated content directly. For example: "I've created your image! You can download it here: [s3 presigned url URL]" or "Your Excel file is ready: [s3 presigned URL]".
 
 Remember: Always prioritize giving a direct text answer first, then offer additional content creation if relevant."""
         
