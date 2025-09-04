@@ -8,7 +8,7 @@ import React, {
 } from 'react';
 import ButtonSend from './ButtonSend';
 import Textarea from './Textarea';
-import { AttachmentType } from '../hooks/useChat';
+import { AttachmentType, S3AttachmentType } from '../hooks/useChat';
 import Button from './Button';
 import {
   PiArrowsCounterClockwise,
@@ -46,11 +46,13 @@ type Props = BaseProps & {
   canContinue: boolean;
   isLoading: boolean;
   isNewChat?: boolean;
+  conversationId?: string;
   onSend: (
     content: string,
     enableReasoning: boolean,
     base64EncodedImages?: string[],
-    attachments?: AttachmentType[]
+    attachments?: AttachmentType[],
+    s3Attachments?: S3AttachmentType[]
   ) => void;
   onRegenerate: (enableReasoning: boolean) => void;
   continueGenerate: () => void;
@@ -62,13 +64,17 @@ type Props = BaseProps & {
 // Ref: https://docs.anthropic.com/en/docs/build-with-claude/vision#evaluate-image-size
 const MAX_IMAGE_WIDTH = 1568;
 const MAX_IMAGE_HEIGHT = 1568;
-// 6 MB (Lambda response size limit is 6 MB)
-// Ref: https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html
-// Converse API can handle 4.5 MB x 5 files, but the API to fetch conversation history is based on the lambda,
-// so we limit the size to 6 MB to prevent the error.
-// Need to refactor if want to increase the limit by using s3 presigned URL.
-const MAX_FILE_SIZE_TO_SEND_MB = 6;
-const MAX_FILE_SIZE_TO_SEND_BYTES = MAX_FILE_SIZE_TO_SEND_MB * 1024 * 1024;
+// Bedrock Converse API limits
+const BEDROCK_MAX_FILE_SIZE_MB = 4.5;
+const BEDROCK_MAX_FILE_SIZE_BYTES = BEDROCK_MAX_FILE_SIZE_MB * 1024 * 1024;
+
+// Maximum supported file size (will be split if PDF)
+const MAX_SUPPORTED_FILE_SIZE_MB = 22;
+const MAX_SUPPORTED_FILE_SIZE_BYTES = MAX_SUPPORTED_FILE_SIZE_MB * 1024 * 1024;
+
+// Lambda response limit for conversation history
+const MAX_CONVERSATION_RESPONSE_MB = 6;
+const MAX_CONVERSATION_RESPONSE_BYTES = MAX_CONVERSATION_RESPONSE_MB * 1024 * 1024;
 
 const useInputChatContentState = create<{
   base64EncodedImages: string[];
@@ -89,6 +95,20 @@ const useInputChatContentState = create<{
   }) => void;
   removeTextFile: (index: number) => void;
   clearAttachedFiles: () => void;
+  s3AttachedFiles: {
+    name: string;
+    type: string;
+    size: number;
+    s3Key: string;
+  }[];
+  pushS3File: (file: {
+    name: string;
+    type: string;
+    size: number;
+    s3Key: string;
+  }) => void;
+  removeS3File: (index: number) => void;
+  clearS3AttachedFiles: () => void;
   previewImageUrl: string | null;
   setPreviewImageUrl: (url: string | null) => void;
   isOpenPreviewImage: boolean;
@@ -144,6 +164,26 @@ const useInputChatContentState = create<{
       attachedFiles: [],
     });
   },
+  s3AttachedFiles: [],
+  pushS3File: (file) => {
+    set({
+      s3AttachedFiles: produce(get().s3AttachedFiles, (draft) => {
+        draft.push(file);
+      }),
+    });
+  },
+  removeS3File: (index) => {
+    set({
+      s3AttachedFiles: produce(get().s3AttachedFiles, (draft) => {
+        draft.splice(index, 1);
+      }),
+    });
+  },
+  clearS3AttachedFiles: () => {
+    set({
+      s3AttachedFiles: [],
+    });
+  },
   totalFileSizeToSend: 0,
   setTotalFileSizeToSend: (size) =>
     set({
@@ -181,6 +221,10 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
       pushTextFile,
       removeTextFile,
       clearAttachedFiles,
+      s3AttachedFiles,
+      pushS3File,
+      removeS3File,
+      clearS3AttachedFiles,
       totalFileSizeToSend,
       setTotalFileSizeToSend,
     } = useInputChatContentState();
@@ -188,6 +232,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
     useEffect(() => {
       clearBase64EncodedImages();
       clearAttachedFiles();
+      clearS3AttachedFiles();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -206,22 +251,33 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
         extractedContent: file.content,
       }));
 
+      const s3Attachments = s3AttachedFiles.map((file) => ({
+        fileName: file.name,
+        fileType: file.type,
+        s3Key: file.s3Key,
+        fileSize: file.size,
+      }));
+
       props.onSend(
         content,
         props.reasoningEnabled,
         !disabledImageUpload && base64EncodedImages.length > 0
           ? base64EncodedImages
           : undefined,
-        attachments.length > 0 ? attachments : undefined
+        attachments.length > 0 ? attachments : undefined,
+        s3Attachments.length > 0 ? s3Attachments : undefined
       );
       setContent('');
       clearBase64EncodedImages();
       clearAttachedFiles();
+      clearS3AttachedFiles();
     }, [
       base64EncodedImages,
       attachedFiles,
+      s3AttachedFiles,
       clearBase64EncodedImages,
       clearAttachedFiles,
+      clearS3AttachedFiles,
       content,
       disabledImageUpload,
       props,
@@ -299,16 +355,34 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
     );
 
     const handleAttachedFileRead = useCallback(
-      (file: File) => {
-        if (file.size > MAX_FILE_SIZE_BYTES) {
+      async (file: File) => {
+        // Check maximum supported file size
+        if (file.size > MAX_SUPPORTED_FILE_SIZE_BYTES) {
           open(
             t('error.attachment.fileSizeExceeded', {
-              maxSize: `${MAX_FILE_SIZE_MB} MB`,
+              maxSize: `${MAX_SUPPORTED_FILE_SIZE_MB} MB`,
             })
           );
           return;
         }
 
+        // Check if file should use S3 storage
+        const shouldUseS3 = file.size > MAX_CONVERSATION_RESPONSE_BYTES;
+        
+        // Check if PDF should be split
+        const shouldSplitPDF = file.type === 'application/pdf' && file.size > BEDROCK_MAX_FILE_SIZE_BYTES;
+
+        if (shouldUseS3 || shouldSplitPDF) {
+          await handleLargeFileUpload(file, shouldSplitPDF);
+        } else {
+          await handleRegularFileUpload(file);
+        }
+      },
+      [pushTextFile, pushS3File, totalFileSizeToSend, setTotalFileSizeToSend, open, t]
+    );
+
+    const handleRegularFileUpload = useCallback(
+      (file: File) => {
         const reader = new FileReader();
         reader.onload = () => {
           if (reader.result instanceof ArrayBuffer) {
@@ -327,11 +401,11 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
             // Total file size check
             if (
               totalFileSizeToSend + base64String.length >
-              MAX_FILE_SIZE_TO_SEND_BYTES
+              MAX_CONVERSATION_RESPONSE_BYTES
             ) {
               open(
                 t('error.totalFileSizeToSendExceeded', {
-                  maxSize: `${MAX_FILE_SIZE_TO_SEND_MB} MB`,
+                  maxSize: `${MAX_CONVERSATION_RESPONSE_MB} MB`,
                 })
               );
               return;
@@ -348,6 +422,78 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
         reader.readAsArrayBuffer(file);
       },
       [pushTextFile, totalFileSizeToSend, setTotalFileSizeToSend, open, t]
+    );
+
+    const handleLargeFileUpload = useCallback(
+      async (file: File, shouldSplit: boolean) => {
+        try {
+          // Import S3 utilities dynamically
+          const { 
+            getDocumentUploadUrl, 
+            uploadFileToS3, 
+            splitPDF 
+          } = await import('../utils/s3Documents');
+
+          if (shouldSplit) {
+            // Upload original PDF first
+            const uploadResponse = await getDocumentUploadUrl(props.conversationId || 'temp', {
+              filename: file.name,
+              content_type: file.type,
+              file_size: file.size,
+            });
+
+            await uploadFileToS3(uploadResponse.upload_url, file);
+
+            // Split the PDF
+            const splitResponse = await splitPDF(props.conversationId || 'temp', {
+              s3_key: uploadResponse.s3_key,
+              max_size_mb: BEDROCK_MAX_FILE_SIZE_MB,
+            });
+
+            // Add each chunk as a regular attachment
+            splitResponse.chunks.forEach((chunk, index) => {
+              pushTextFile({
+                name: `${file.name} (Part ${index + 1}/${splitResponse.total_chunks})`,
+                type: file.type,
+                size: chunk.size_bytes,
+                content: chunk.base64_content,
+              });
+            });
+
+            open(
+              t('info.pdfSplit', {
+                chunks: splitResponse.total_chunks,
+                defaultValue: `PDF split into ${splitResponse.total_chunks} parts`,
+              })
+            );
+          } else {
+            // Upload large file to S3
+            // Note: We'll need the conversation ID from props or context
+            const uploadResponse = await getDocumentUploadUrl(props.conversationId || 'temp', {
+              filename: file.name,
+              content_type: file.type,
+              file_size: file.size,
+            });
+
+            await uploadFileToS3(uploadResponse.upload_url, file);
+
+            pushS3File({
+              name: file.name,
+              type: file.type,
+              size: file.size,
+              s3Key: uploadResponse.s3_key,
+            });
+          }
+        } catch (error) {
+          console.error('Error handling large file:', error);
+          open(
+            t('error.fileUploadFailed', {
+              defaultValue: 'Failed to upload file',
+            })
+          );
+        }
+      },
+      [pushTextFile, pushS3File, open, t]
     );
 
     useEffect(() => {
@@ -550,15 +696,27 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
               </ModalDialog>
             </div>
           )}
-          {attachedFiles.length > 0 && (
+          {(attachedFiles.length > 0 || s3AttachedFiles.length > 0) && (
             <div className="relative m-2 mr-24 flex flex-wrap gap-3">
               {attachedFiles.map((file, idx) => (
-                <div key={idx} className="relative flex flex-col items-center">
+                <div key={`regular-${idx}`} className="relative flex flex-col items-center">
                   <UploadedAttachedFile fileName={file.name} />
                   <ButtonIcon
                     className="absolute left-2 top-1 -m-2 border border-aws-sea-blue-light bg-white p-1 text-xs text-aws-sea-blue-light dark:border-aws-sea-blue-dark dark:text-aws-sea-blue-dark"
                     onClick={() => {
                       removeTextFile(idx);
+                    }}>
+                    <PiX />
+                  </ButtonIcon>
+                </div>
+              ))}
+              {s3AttachedFiles.map((file, idx) => (
+                <div key={`s3-${idx}`} className="relative flex flex-col items-center">
+                  <UploadedAttachedFile fileName={`${file.name} (S3)`} />
+                  <ButtonIcon
+                    className="absolute left-2 top-1 -m-2 border border-aws-sea-blue-light bg-white p-1 text-xs text-aws-sea-blue-light dark:border-aws-sea-blue-dark dark:text-aws-sea-blue-dark"
+                    onClick={() => {
+                      removeS3File(idx);
                     }}>
                     <PiX />
                   </ButtonIcon>

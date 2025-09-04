@@ -39,6 +39,13 @@ export type AttachmentType = {
   extractedContent: string;
 };
 
+export type S3AttachmentType = {
+  fileName: string;
+  fileType: string;
+  s3Key: string;
+  fileSize: number;
+};
+
 export type ThinkingAction =
   | {
       type: 'doing';
@@ -367,9 +374,10 @@ const useChat = () => {
     enableReasoning: boolean;
     base64EncodedImages?: string[];
     attachments?: AttachmentType[];
+    s3Attachments?: S3AttachmentType[];
     bot?: BotInputType;
   }) => {
-    const { content, bot, base64EncodedImages, attachments } = params;
+    const { content, bot, base64EncodedImages, attachments, s3Attachments } = params;
     const isNewChat = conversationId ? false : true;
     const newConversationId = ulid();
 
@@ -410,9 +418,22 @@ const useChat = () => {
       }
     );
 
+    const s3AttachContents: MessageContent['content'] = (s3Attachments ?? []).map(
+      (attachment) => {
+        return {
+          contentType: 's3_attachment',
+          fileName: attachment.fileName,
+          s3Key: attachment.s3Key,
+          fileSize: attachment.fileSize,
+          mimeType: attachment.fileType,
+        };
+      }
+    );
+
     const messageContent: MessageContent = {
       content: [
         ...attachContents,
+        ...s3AttachContents,
         ...imageContents,
         {
           body: content,

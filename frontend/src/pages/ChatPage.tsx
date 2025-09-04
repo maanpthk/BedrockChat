@@ -8,7 +8,7 @@ import React, {
 } from 'react';
 import InputChatContent from '../components/InputChatContent';
 import useChat from '../hooks/useChat';
-import { AttachmentType } from '../hooks/useChat';
+import { AttachmentType, S3AttachmentType } from '../hooks/useChat';
 import ChatMessage from '../components/ChatMessage';
 import useScroll from '../hooks/useScroll';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -184,12 +184,14 @@ const ChatPage: React.FC = () => {
       content: string,
       enableReasoning: boolean,
       base64EncodedImages?: string[],
-      attachments?: AttachmentType[]
+      attachments?: AttachmentType[],
+      s3Attachments?: S3AttachmentType[]
     ) => {
       postChat({
         content,
         base64EncodedImages,
         attachments,
+        s3Attachments,
         bot: inputBotParams,
         enableReasoning,
       });
@@ -698,6 +700,7 @@ const ChatPage: React.FC = () => {
           canContinue={getShouldContinue()}
           isLoading={postingMessage}
           isNewChat={messages.length == 0}
+          conversationId={conversationId}
           onSend={onSend}
           onRegenerate={onRegenerate}
           continueGenerate={onContinueGenerate}

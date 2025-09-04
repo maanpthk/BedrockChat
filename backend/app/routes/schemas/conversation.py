@@ -63,6 +63,16 @@ class AttachmentContent(BaseSchema):
     body: Base64EncodedBytes = Field(..., description="Content body.")
 
 
+class S3AttachmentContent(BaseSchema):
+    content_type: Literal["s3_attachment"] = Field(
+        ..., description="Content type for S3-stored attachments."
+    )
+    file_name: str = Field(..., description="File name of the attachment.")
+    s3_key: str = Field(..., description="S3 key where the file is stored.")
+    file_size: int = Field(..., description="File size in bytes.")
+    mime_type: str = Field(..., description="MIME type of the file.")
+
+
 class FeedbackInput(BaseSchema):
     thumbs_up: bool
     category: str | None = Field(
@@ -157,6 +167,7 @@ Content = Annotated[
     TextContent
     | ImageContent
     | AttachmentContent
+    | S3AttachmentContent
     | ToolUseContent
     | ToolResultContent
     | ReasoningContent,
@@ -252,3 +263,30 @@ class NewTitleInput(BaseSchema):
 
 class ProposedTitle(BaseSchema):
     title: str
+
+
+class DocumentUploadRequest(BaseSchema):
+    filename: str = Field(..., description="Original filename")
+    content_type: str = Field(..., description="MIME type of the file")
+    file_size: int = Field(..., description="File size in bytes")
+
+
+class DocumentUploadResponse(BaseSchema):
+    upload_url: str = Field(..., description="Presigned URL for uploading")
+    s3_key: str = Field(..., description="S3 key for the uploaded file")
+    expires_in: int = Field(..., description="URL expiration time in seconds")
+
+
+class DocumentDownloadResponse(BaseSchema):
+    download_url: str = Field(..., description="Presigned URL for downloading")
+    expires_in: int = Field(..., description="URL expiration time in seconds")
+
+
+class PDFSplitRequest(BaseSchema):
+    s3_key: str = Field(..., description="S3 key of the PDF to split")
+    max_size_mb: float = Field(default=4.5, description="Maximum size per chunk in MB")
+
+
+class PDFSplitResponse(BaseSchema):
+    chunks: list[dict] = Field(..., description="List of PDF chunks with metadata")
+    total_chunks: int = Field(..., description="Total number of chunks created")

@@ -238,9 +238,11 @@ const ChatMessage: React.FC<Props> = (props) => {
                   })}
                 </div>
               )}
-              {chatContent.content.some(
+              {(chatContent.content.some(
                 (content) => content.contentType === 'attachment'
-              ) && (
+              ) || chatContent.content.some(
+                (content) => content.contentType === 's3_attachment'
+              )) && (
                 <div key="files" className="my-2 flex">
                   {chatContent.content.map((content, idx) => {
                     if (content.contentType === 'attachment') {
@@ -268,6 +270,25 @@ const ChatMessage: React.FC<Props> = (props) => {
                                 }
                               : undefined
                           }
+                        />
+                      );
+                    } else if (content.contentType === 's3_attachment') {
+                      return (
+                        <UploadedAttachedFile
+                          key={idx}
+                          fileName={`${content.fileName} (${(content.fileSize / 1024 / 1024).toFixed(1)}MB)`}
+                          onClick={async () => {
+                            try {
+                              const { getDocumentDownloadUrl } = await import('../utils/s3Documents');
+                              const downloadResponse = await getDocumentDownloadUrl(
+                                conversationId || 'temp',
+                                content.s3Key
+                              );
+                              window.open(downloadResponse.download_url, '_blank');
+                            } catch (error) {
+                              console.error('Failed to download S3 document:', error);
+                            }
+                          }}
                         />
                       );
                     }

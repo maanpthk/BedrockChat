@@ -7,6 +7,7 @@ export type Content =
   | TextContent
   | ImageContent
   | AttachmentContent
+  | S3AttachmentContent
   | ReasoningContent
   | ToolUseContent
   | ToolResultContent;
@@ -26,6 +27,14 @@ export type AttachmentContent = {
   contentType: 'attachment';
   fileName?: string;
   body: string;
+};
+
+export type S3AttachmentContent = {
+  contentType: 's3_attachment';
+  fileName: string;
+  s3Key: string;
+  fileSize: number;
+  mimeType: string;
 };
 
 export type ReasoningContent = {

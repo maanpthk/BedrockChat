@@ -14,9 +14,14 @@ from app.routes.schemas.conversation import (
     Conversation,
     ConversationMetaOutput,
     ConversationSearchResult,
+    DocumentDownloadResponse,
+    DocumentUploadRequest,
+    DocumentUploadResponse,
     FeedbackInput,
     FeedbackOutput,
     NewTitleInput,
+    PDFSplitRequest,
+    PDFSplitResponse,
     ProposedTitle,
     RelatedDocument,
 )
@@ -28,7 +33,7 @@ from app.usecases.chat import (
     search_conversations as search_conversations_usecase,
 )
 from app.user import User
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 
 router = APIRouter(tags=["conversation"])
 
@@ -187,3 +192,123 @@ def put_feedback(
         category=feedback_input.category if feedback_input.category else "",
         comment=feedback_input.comment if feedback_input.comment else "",
     )
+
+
+@router.post("/conversation/{conversation_id}/documents/upload", response_model=DocumentUploadResponse)
+def get_document_upload_url(
+    request: Request, 
+    conversation_id: str, 
+    upload_request: DocumentUploadRequest
+):
+    """Get presigned URL for uploading a document"""
+    from app.utils_s3_documents import get_document_presigned_upload_url
+    
+    current_user: User = request.state.current_user
+    
+    upload_url, s3_key = get_document_presigned_upload_url(
+        user_id=current_user.id,
+        conversation_id=conversation_id,
+        filename=upload_request.filename,
+        content_type=upload_request.content_type,
+    )
+    
+    return DocumentUploadResponse(
+        upload_url=upload_url,
+        s3_key=s3_key,
+        expires_in=3600,
+    )
+
+
+@router.get("/conversation/{conversation_id}/documents/{s3_key:path}/download", response_model=DocumentDownloadResponse)
+def get_document_download_url(
+    request: Request,
+    conversation_id: str,
+    s3_key: str,
+):
+    """Get presigned URL for downloading a document"""
+    from app.utils_s3_documents import get_document_presigned_download_url, check_document_exists
+    
+    current_user: User = request.state.current_user
+    
+    # Verify the document exists and belongs to the user
+    if not s3_key.startswith(f"conversations/{current_user.id}/{conversation_id}/"):
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied to this document"
+        )
+    
+    if not check_document_exists(s3_key):
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found"
+        )
+    
+    download_url = get_document_presigned_download_url(s3_key)
+    
+    return DocumentDownloadResponse(
+        download_url=download_url,
+        expires_in=3600,
+    )
+
+
+@router.post("/conversation/{conversation_id}/documents/split-pdf", response_model=PDFSplitResponse)
+def split_pdf_document(
+    request: Request,
+    conversation_id: str,
+    split_request: PDFSplitRequest,
+):
+    """Split a large PDF into smaller chunks"""
+    import base64
+    from app.utils_pdf import split_pdf_by_size
+    from app.utils_s3_documents import get_large_message_content, store_large_message_content
+    
+    current_user: User = request.state.current_user
+    
+    # Verify the document belongs to the user
+    if not split_request.s3_key.startswith(f"conversations/{current_user.id}/{conversation_id}/"):
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied to this document"
+        )
+    
+    try:
+        # Get the PDF content from S3
+        pdf_content = get_large_message_content(split_request.s3_key)
+        
+        # Split the PDF
+        chunks = split_pdf_by_size(pdf_content, split_request.max_size_mb)
+        
+        # Store each chunk and create response
+        chunk_info = []
+        for i, (chunk_bytes, page_count) in enumerate(chunks):
+            # Store chunk in S3
+            chunk_s3_key = store_large_message_content(
+                user_id=current_user.id,
+                conversation_id=conversation_id,
+                message_id=f"pdf_chunk_{i}_{split_request.s3_key.split('/')[-1]}",
+                content=chunk_bytes,
+                content_type="application/pdf",
+            )
+            
+            # Encode chunk as base64 for immediate use
+            chunk_base64 = base64.b64encode(chunk_bytes).decode('utf-8')
+            
+            chunk_info.append({
+                "chunk_index": i,
+                "s3_key": chunk_s3_key,
+                "page_count": page_count,
+                "size_bytes": len(chunk_bytes),
+                "base64_content": chunk_base64,
+            })
+        
+        return PDFSplitResponse(
+            chunks=chunk_info,
+            total_chunks=len(chunks),
+        )
+        
+    except Exception as e:
+        logger.error(f"Error splitting PDF: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to split PDF: {str(e)}"
+        )

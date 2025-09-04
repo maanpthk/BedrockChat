@@ -19,10 +19,12 @@ from app.repositories.conversation import (
 from app.repositories.conversation_search import find_conversations_by_query
 from app.repositories.custom_bot import alias_exists, store_alias
 from app.repositories.models.conversation import (
+    AttachmentContentModel,
     ConversationModel,
     MessageModel,
     ReasoningContentModel,
     RelatedDocumentModel,
+    S3AttachmentContentModel,
     SimpleMessageModel,
     TextContentModel,
     ToolResultContentModel,
@@ -376,8 +378,11 @@ Remember: Always prioritize giving a direct text answer first, then offer additi
 
     thinking_log: list[SimpleMessageModel] = []
     while True:
+        # Resolve S3 attachments before sending to Bedrock
+        resolved_messages = resolve_s3_attachments_in_messages(messages)
+        
         result = stream_handler.run(
-            messages=messages,
+            messages=resolved_messages,
             grounding_source=grounding_source,
             message_for_continue_generate=message_for_continue_generate,
             enable_reasoning=chat_input.enable_reasoning,
@@ -715,3 +720,51 @@ def search_conversations(query: str, user: User) -> list[ConversationSearchResul
         )
 
     return output
+
+
+def resolve_s3_attachments_in_messages(
+    messages: list[SimpleMessageModel],
+) -> list[SimpleMessageModel]:
+    """
+    Resolve S3 attachments by downloading them and converting to regular attachments.
+    This is needed because Bedrock Converse API doesn't support S3 references directly.
+    """
+    from app.utils_s3_documents import get_large_message_content
+    import base64
+    
+    resolved_messages = []
+    
+    for message in messages:
+        resolved_content = []
+        
+        for content in message.content:
+            if isinstance(content, S3AttachmentContentModel):
+                try:
+                    # Download the file from S3
+                    file_content = get_large_message_content(content.s3_key)
+                    
+                    # Convert to regular attachment
+                    attachment_content = AttachmentContentModel(
+                        content_type="attachment",
+                        file_name=content.file_name,
+                        body=base64.b64encode(file_content).decode('utf-8'),
+                    )
+                    resolved_content.append(attachment_content)
+                    
+                    logger.info(f"Resolved S3 attachment: {content.file_name}")
+                    
+                except Exception as e:
+                    logger.error(f"Failed to resolve S3 attachment {content.file_name}: {e}")
+                    # Skip this attachment if we can't resolve it
+                    continue
+            else:
+                resolved_content.append(content)
+        
+        resolved_messages.append(
+            SimpleMessageModel(
+                role=message.role,
+                content=resolved_content,
+            )
+        )
+    
+    return resolved_messages

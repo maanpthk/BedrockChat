@@ -19,6 +19,7 @@ from app.routes.schemas.conversation import (
     MessageInput,
     ReasoningContent,
     RelatedDocument,
+    S3AttachmentContent,
     SimpleMessage,
     TextContent,
     TextToolResult,
@@ -189,6 +190,39 @@ class AttachmentContentModel(BaseModel):
             if _is_converse_supported_document_format(format)
             else []
         )
+
+
+class S3AttachmentContentModel(BaseModel):
+    content_type: Literal["s3_attachment"]
+    file_name: str
+    s3_key: str
+    file_size: int
+    mime_type: str
+
+    @classmethod
+    def from_s3_attachment_content(cls, content: S3AttachmentContent) -> Self:
+        return cls(
+            content_type="s3_attachment",
+            file_name=content.file_name,
+            s3_key=content.s3_key,
+            file_size=content.file_size,
+            mime_type=content.mime_type,
+        )
+
+    def to_content(self) -> Content:
+        return S3AttachmentContent(
+            content_type="s3_attachment",
+            file_name=self.file_name,
+            s3_key=self.s3_key,
+            file_size=self.file_size,
+            mime_type=self.mime_type,
+        )
+
+    def to_contents_for_converse(self) -> list[ContentBlockTypeDef]:
+        # S3 attachments need to be downloaded and converted to regular attachments
+        # This should be handled by the caller before sending to Bedrock
+        logger.warning(f"S3 attachment {self.file_name} needs to be resolved before sending to Bedrock")
+        return []
 
 
 class FeedbackModel(BaseModel):
@@ -596,6 +630,7 @@ ContentModel = Annotated[
     TextContentModel
     | ImageContentModel
     | AttachmentContentModel
+    | S3AttachmentContentModel
     | ToolUseContentModel
     | ToolResultContentModel
     | ReasoningContentModel,
@@ -613,6 +648,9 @@ def content_model_from_content(content: Content) -> ContentModel:
 
     elif isinstance(content, AttachmentContent):
         return AttachmentContentModel.from_attachment_content(content=content)
+
+    elif isinstance(content, S3AttachmentContent):
+        return S3AttachmentContentModel.from_s3_attachment_content(content=content)
 
     elif isinstance(content, ToolUseContent):
         return ToolUseContentModel.from_tool_use_content(content=content)
