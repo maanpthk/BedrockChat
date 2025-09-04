@@ -171,14 +171,18 @@ class AttachmentContentModel(BaseModel):
         )
 
     def to_contents_for_converse(self) -> list[ContentBlockTypeDef]:
+        import logging
+        logger = logging.getLogger(__name__)
+        
         # e.g. "document.txt" -> "txt"
         format = Path(self.file_name).suffix[1:]
 
         # e.g. "document.txt" -> "document"
         name = Path(self.file_name).stem
 
-        return (
-            [
+        if _is_converse_supported_document_format(format):
+            logger.info(f"Converting attachment to Bedrock format: {self.file_name}, format: {format}, body size: {len(self.body)} bytes")
+            return [
                 {
                     "document": {
                         "format": format,
@@ -187,9 +191,9 @@ class AttachmentContentModel(BaseModel):
                     },
                 },
             ]
-            if _is_converse_supported_document_format(format)
-            else []
-        )
+        else:
+            logger.warning(f"Unsupported document format for Bedrock: {format} (file: {self.file_name})")
+            return []
 
 
 class S3AttachmentContentModel(BaseModel):

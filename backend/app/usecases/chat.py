@@ -762,15 +762,15 @@ def resolve_s3_attachments_in_messages(
                     from app.utils_s3_documents import download_document_from_s3
                     file_content = download_document_from_s3(content.s3_key)
                     
-                    # Convert to regular attachment
+                    # Convert to regular attachment - pass bytes directly
                     attachment_content = AttachmentContentModel(
                         content_type="attachment",
                         file_name=content.file_name,
-                        body=base64.b64encode(file_content).decode('utf-8'),
+                        body=file_content,
                     )
                     resolved_content.append(attachment_content)
                     
-                    logger.info(f"Resolved S3 attachment: {content.file_name}")
+                    logger.info(f"Resolved S3 attachment: {content.file_name}, size: {len(file_content)} bytes")
                     
                 except Exception as e:
                     logger.error(f"Failed to resolve S3 attachment {content.file_name}: {e}")
