@@ -69,7 +69,7 @@ type Props = BaseProps & {
 const MAX_IMAGE_WIDTH = 1568;
 const MAX_IMAGE_HEIGHT = 1568;
 // Use existing Bedrock limits from constants
-const BEDROCK_MAX_FILE_SIZE_MB = MAX_FILE_SIZE_MB; // 4.5MB
+const BEDROCK_MAX_FILE_SIZE_MB = MAX_FILE_SIZE_MB; // 4.0MB
 const BEDROCK_MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_BYTES;
 
 // Lambda response limit for conversation history - use S3 storage threshold

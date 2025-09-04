@@ -270,7 +270,11 @@ def split_pdf_document(
     current_user: User = request.state.current_user
     
     # Verify the document belongs to the user
-    if not split_request.s3_key.startswith(f"conversations/{current_user.id}/{conversation_id}/"):
+    valid_prefixes = [
+        f"conversations/{current_user.id}/{conversation_id}/",
+        f"conversations/{current_user.id}/temp/"
+    ]
+    if not any(split_request.s3_key.startswith(prefix) for prefix in valid_prefixes):
         raise HTTPException(
             status_code=403,
             detail="Access denied to this document"

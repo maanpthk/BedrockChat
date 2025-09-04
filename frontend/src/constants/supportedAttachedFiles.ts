@@ -72,7 +72,7 @@ export const SUPPORTED_FILE_EXTENSIONS = [
 // Converse API limitations:
 // You can include up to five documents. Each document’s size must be no more than 4.5 MB.
 // Ref: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/bedrock-runtime/converse.html
-export const MAX_FILE_SIZE_MB = 4.5;
+export const MAX_FILE_SIZE_MB = 4.0;
 export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 export const MAX_ATTACHED_FILES = 5;
 

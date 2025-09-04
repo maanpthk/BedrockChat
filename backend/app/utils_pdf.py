@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def split_pdf_by_size(
-    pdf_content: bytes, max_size_mb: float = 4.5
+    pdf_content: bytes, max_size_mb: float = 4.0
 ) -> list[tuple[bytes, int]]:
     """
     Split a PDF into chunks based on size limit.

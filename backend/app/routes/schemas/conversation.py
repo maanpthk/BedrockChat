@@ -284,7 +284,7 @@ class DocumentDownloadResponse(BaseSchema):
 
 class PDFSplitRequest(BaseSchema):
     s3_key: str = Field(..., description="S3 key of the PDF to split")
-    max_size_mb: float = Field(default=4.5, description="Maximum size per chunk in MB")
+    max_size_mb: float = Field(default=4.0, description="Maximum size per chunk in MB")
 
 
 class PDFSplitResponse(BaseSchema):

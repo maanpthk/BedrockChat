@@ -122,7 +122,7 @@ def test_api_schemas():
         
         split_req = PDFSplitRequest(
             s3_key='test/key',
-            max_size_mb=4.5
+            max_size_mb=4.0
         )
         print(f"✓ Split request schema: {split_req.s3_key}")
         
