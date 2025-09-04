@@ -182,15 +182,66 @@ class AttachmentContentModel(BaseModel):
 
         if _is_converse_supported_document_format(format):
             logger.info(f"Converting attachment to Bedrock format: {self.file_name}, format: {format}, body size: {len(self.body)} bytes")
-            return [
-                {
-                    "document": {
-                        "format": format,
-                        "name": _convert_to_valid_file_name(name),
-                        "source": {"bytes": self.body},
-                    },
-                },
-            ]
+            
+            # Debug: Check the type and content of self.body
+            logger.info(f"Body type: {type(self.body)}, Body length: {len(self.body)}")
+            if len(self.body) > 0:
+                logger.info(f"First 20 bytes: {self.body[:20]}")
+                # Verify it's a valid PDF
+                if format == "pdf" and not self.body.startswith(b'%PDF-'):
+                    logger.error(f"Invalid PDF: does not start with PDF header!")
+                    logger.error(f"Actual start: {self.body[:50]}")
+            else:
+                logger.error(f"Document {self.file_name} has empty body!")
+            
+            # For PDF chunks, create more descriptive names and add context
+            document_name = _convert_to_valid_file_name(name)
+            context = None
+            
+            if format == "pdf" and ("part" in name.lower() or "chunk" in name.lower()):
+                # This is a PDF chunk - add context to help Bedrock understand
+                if "part_1" in name or "chunk_1" in name:
+                    context = "This is part 1 of a multi-part PDF document"
+                elif "part_2" in name or "chunk_2" in name:
+                    context = "This is part 2 of a multi-part PDF document"
+                elif "part_3" in name or "chunk_3" in name:
+                    context = "This is part 3 of a multi-part PDF document"
+                elif "part_4" in name or "chunk_4" in name:
+                    context = "This is part 4 of a multi-part PDF document"
+                else:
+                    context = "This is part of a multi-part PDF document"
+                
+                # Make the name more descriptive
+                if "_part_" in name:
+                    base_name = name.split("_part_")[0]
+                    part_num = name.split("_part_")[1]
+                    document_name = f"Document Part {part_num}"
+                elif "_chunk_" in name:
+                    base_name = name.split("_chunk_")[0]
+                    chunk_num = name.split("_chunk_")[1]
+                    document_name = f"Document Chunk {chunk_num}"
+            
+            # Debug: Check the type and content of self.body
+            logger.info(f"Body type: {type(self.body)}, Body length: {len(self.body)}")
+            if len(self.body) > 0:
+                logger.info(f"First 20 bytes: {self.body[:20]}")
+                # Verify it's a valid PDF
+                if format == "pdf" and not self.body.startswith(b'%PDF-'):
+                    logger.error(f"Invalid PDF: does not start with PDF header!")
+                    logger.error(f"Actual start: {self.body[:50]}")
+            
+            document_block = {
+                "document": {
+                    "format": format,
+                    "name": document_name,
+                    "source": {"bytes": self.body},
+                }
+            }
+            
+            if context:
+                document_block["document"]["context"] = context
+            
+            return [document_block]
         else:
             logger.warning(f"Unsupported document format for Bedrock: {format} (file: {self.file_name})")
             return []

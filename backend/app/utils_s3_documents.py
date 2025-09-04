@@ -177,7 +177,18 @@ def download_document_from_s3(s3_key: str) -> bytes:
     client = boto3.client("s3")
     try:
         response = client.get_object(Bucket=DOCUMENT_BUCKET, Key=s3_key)
-        return response["Body"].read()
+        content = response["Body"].read()
+        
+        # Debug: Log download details
+        logger.info(f"Downloaded from S3: {s3_key}, size: {len(content)} bytes")
+        if len(content) > 0:
+            logger.info(f"Content starts with: {content[:20]}")
+            if s3_key.endswith('.pdf') and not content.startswith(b'%PDF-'):
+                logger.error(f"Downloaded content is not a valid PDF! First 50 bytes: {content[:50]}")
+        else:
+            logger.error(f"Downloaded empty content from S3 key: {s3_key}")
+        
+        return content
     except ClientError as e:
         logger.error(f"Failed to download document from S3: {e}")
         raise

@@ -305,6 +305,23 @@ def split_pdf_document(
         # Store each chunk and create response
         chunk_info = []
         for i, (chunk_bytes, page_count) in enumerate(chunks):
+            # Debug: Validate chunk content
+            logger.info(f"Chunk {i}: {len(chunk_bytes)} bytes, pages: {page_count}")
+            if len(chunk_bytes) > 0:
+                logger.info(f"Chunk {i} starts with: {chunk_bytes[:20]}")
+                if not chunk_bytes.startswith(b'%PDF-'):
+                    logger.error(f"Chunk {i} is not a valid PDF!")
+                else:
+                    # Try to validate the PDF chunk by reading it
+                    try:
+                        from app.utils_pdf import get_pdf_info
+                        chunk_info_test = get_pdf_info(chunk_bytes)
+                        logger.info(f"Chunk {i} validation: {chunk_info_test}")
+                    except Exception as e:
+                        logger.error(f"Chunk {i} PDF validation failed: {e}")
+            else:
+                logger.error(f"Chunk {i} is empty!")
+            
             # Store chunk in S3 document bucket (same as original files)
             import uuid
             chunk_file_id = str(uuid.uuid4())
@@ -321,6 +338,10 @@ def split_pdf_document(
                 Body=chunk_bytes,
                 ContentType="application/pdf"
             )
+            
+            logger.info(f"Stored chunk {i} to S3: {chunk_s3_key}")
+            
+            logger.info(f"Stored chunk {i} to S3: {chunk_s3_key}")
             
             # Generate presigned download URL for the chunk
             from app.utils_s3_documents import get_document_presigned_download_url

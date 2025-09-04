@@ -760,7 +760,23 @@ def resolve_s3_attachments_in_messages(
                 try:
                     # Download the file from S3 document bucket
                     from app.utils_s3_documents import download_document_from_s3
+                    logger.info(f"Downloading S3 attachment: {content.s3_key}")
                     file_content = download_document_from_s3(content.s3_key)
+                    
+                    # Validate the downloaded content
+                    if len(file_content) == 0:
+                        logger.error(f"Downloaded empty content for {content.file_name} from S3 key: {content.s3_key}")
+                        continue
+                    
+                    # For PDF files, validate they're actually valid PDFs
+                    if content.file_name.lower().endswith('.pdf'):
+                        # Check if it starts with PDF header
+                        if not file_content.startswith(b'%PDF-'):
+                            logger.error(f"Invalid PDF content for {content.file_name}: does not start with PDF header")
+                            logger.error(f"First 50 bytes: {file_content[:50]}")
+                            continue
+                        else:
+                            logger.info(f"Valid PDF content detected for {content.file_name}")
                     
                     # Convert to regular attachment - pass bytes directly
                     attachment_content = AttachmentContentModel(
