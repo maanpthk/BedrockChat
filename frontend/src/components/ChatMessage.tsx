@@ -38,6 +38,7 @@ type Props = BaseProps & {
   chatContent?: DisplayMessageContent;
   isStreaming?: boolean;
   relatedDocuments?: RelatedDocument[];
+  conversationId?: string;
   onChangeMessageId?: (messageId: string) => void;
   onSubmit?: (messageId: string, content: string) => void;
   onSubmitFeedback?: (messageId: string, feedback: PutFeedbackRequest) => void;
@@ -281,7 +282,7 @@ const ChatMessage: React.FC<Props> = (props) => {
                             try {
                               const { getDocumentDownloadUrl } = await import('../utils/s3Documents');
                               const downloadResponse = await getDocumentDownloadUrl(
-                                conversationId || 'temp',
+                                props.conversationId || 'temp',
                                 content.s3Key
                               );
                               window.open(downloadResponse.download_url, '_blank');

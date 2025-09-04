@@ -75,3 +75,12 @@ export const SUPPORTED_FILE_EXTENSIONS = [
 export const MAX_FILE_SIZE_MB = 4.5;
 export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 export const MAX_ATTACHED_FILES = 5;
+
+// S3 storage thresholds and limits
+// Files larger than this will be stored in S3 instead of being sent directly
+export const S3_STORAGE_THRESHOLD_MB = 6;
+export const S3_STORAGE_THRESHOLD_BYTES = S3_STORAGE_THRESHOLD_MB * 1024 * 1024;
+
+// Maximum supported file size with S3 storage and PDF splitting
+export const MAX_SUPPORTED_FILE_SIZE_MB = 22;
+export const MAX_SUPPORTED_FILE_SIZE_BYTES = MAX_SUPPORTED_FILE_SIZE_MB * 1024 * 1024;

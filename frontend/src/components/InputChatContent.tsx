@@ -33,6 +33,10 @@ import {
   MAX_FILE_SIZE_MB,
   SUPPORTED_FILE_EXTENSIONS,
   MAX_ATTACHED_FILES,
+  S3_STORAGE_THRESHOLD_BYTES,
+  S3_STORAGE_THRESHOLD_MB,
+  MAX_SUPPORTED_FILE_SIZE_BYTES,
+  MAX_SUPPORTED_FILE_SIZE_MB,
 } from '../constants/supportedAttachedFiles';
 
 type Props = BaseProps & {
@@ -64,17 +68,12 @@ type Props = BaseProps & {
 // Ref: https://docs.anthropic.com/en/docs/build-with-claude/vision#evaluate-image-size
 const MAX_IMAGE_WIDTH = 1568;
 const MAX_IMAGE_HEIGHT = 1568;
-// Bedrock Converse API limits
-const BEDROCK_MAX_FILE_SIZE_MB = 4.5;
-const BEDROCK_MAX_FILE_SIZE_BYTES = BEDROCK_MAX_FILE_SIZE_MB * 1024 * 1024;
+// Use existing Bedrock limits from constants
+const BEDROCK_MAX_FILE_SIZE_MB = MAX_FILE_SIZE_MB; // 4.5MB
+const BEDROCK_MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_BYTES;
 
-// Maximum supported file size (will be split if PDF)
-const MAX_SUPPORTED_FILE_SIZE_MB = 22;
-const MAX_SUPPORTED_FILE_SIZE_BYTES = MAX_SUPPORTED_FILE_SIZE_MB * 1024 * 1024;
-
-// Lambda response limit for conversation history
-const MAX_CONVERSATION_RESPONSE_MB = 6;
-const MAX_CONVERSATION_RESPONSE_BYTES = MAX_CONVERSATION_RESPONSE_MB * 1024 * 1024;
+// Lambda response limit for conversation history - use S3 storage threshold
+const MAX_CONVERSATION_RESPONSE_BYTES = S3_STORAGE_THRESHOLD_BYTES;
 
 const useInputChatContentState = create<{
   base64EncodedImages: string[];
@@ -328,11 +327,11 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
             // Total file size check
             if (
               totalFileSizeToSend + resizedImageData.length >
-              MAX_FILE_SIZE_TO_SEND_BYTES
+              MAX_CONVERSATION_RESPONSE_BYTES
             ) {
               open(
                 t('error.totalFileSizeToSendExceeded', {
-                  maxSize: `${MAX_FILE_SIZE_TO_SEND_MB} MB`,
+                  maxSize: `${S3_STORAGE_THRESHOLD_MB} MB`,
                 })
               );
               return;
@@ -405,7 +404,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
             ) {
               open(
                 t('error.totalFileSizeToSendExceeded', {
-                  maxSize: `${MAX_CONVERSATION_RESPONSE_MB} MB`,
+                  maxSize: `${S3_STORAGE_THRESHOLD_MB} MB`,
                 })
               );
               return;

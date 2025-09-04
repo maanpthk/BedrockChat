@@ -434,6 +434,7 @@ const ChatPage: React.FC = () => {
         chatContent={message}
         isStreaming={props.isStreaming}
         relatedDocuments={relatedDocumentsForCitation}
+        conversationId={conversationId}
         onChangeMessageId={props.onChangeMessageId}
         onSubmit={props.onSubmit}
         onSubmitFeedback={props.onSubmitFeedback}

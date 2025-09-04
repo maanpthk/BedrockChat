@@ -124,17 +124,22 @@ export async function splitPDF(
   return response.json();
 }
 
+import { 
+  S3_STORAGE_THRESHOLD_BYTES, 
+  MAX_FILE_SIZE_BYTES 
+} from '../constants/supportedAttachedFiles';
+
 /**
  * Check if a file should be stored in S3 based on size
  */
 export function shouldUseS3Storage(fileSize: number): boolean {
-  // Use S3 for files larger than 6MB (Lambda response limit)
-  return fileSize > 4.5 * 1024 * 1024;
+  // Use S3 for files larger than the storage threshold
+  return fileSize > S3_STORAGE_THRESHOLD_BYTES;
 }
 
 /**
  * Check if a PDF should be split based on size
  */
 export function shouldSplitPDF(file: File): boolean {
-  return file.type === 'application/pdf' && file.size > 4.5 * 1024 * 1024;
+  return file.type === 'application/pdf' && file.size > MAX_FILE_SIZE_BYTES;
 }
