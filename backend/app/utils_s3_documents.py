@@ -161,6 +161,28 @@ def delete_large_message_content(s3_key: str) -> None:
         # Don't raise - deletion failures shouldn't break the flow
 
 
+def download_document_from_s3(s3_key: str) -> bytes:
+    """
+    Download document content directly from S3.
+    
+    Args:
+        s3_key: S3 key of the document
+        
+    Returns:
+        Document content as bytes
+    """
+    if not DOCUMENT_BUCKET:
+        raise ValueError("DOCUMENT_BUCKET environment variable not set")
+    
+    client = boto3.client("s3")
+    try:
+        response = client.get_object(Bucket=DOCUMENT_BUCKET, Key=s3_key)
+        return response["Body"].read()
+    except ClientError as e:
+        logger.error(f"Failed to download document from S3: {e}")
+        raise
+
+
 def check_document_exists(s3_key: str) -> bool:
     """
     Check if a document exists in S3.

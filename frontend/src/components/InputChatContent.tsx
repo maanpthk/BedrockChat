@@ -449,33 +449,15 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
               max_size_mb: BEDROCK_MAX_FILE_SIZE_MB,
             });
 
-            // Download each chunk and add as regular attachment
-            for (const chunk of splitResponse.chunks) {
-              try {
-                // Download the chunk using presigned URL
-                const response = await fetch(chunk.downloadUrl);
-                if (!response.ok) {
-                  throw new Error(`Failed to download chunk: ${response.statusText}`);
-                }
-                
-                const arrayBuffer = await response.arrayBuffer();
-                const base64Content = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-                
-                pushTextFile({
-                  name: chunk.fileName,
-                  type: file.type,
-                  size: chunk.sizeBytes,
-                  content: base64Content,
-                });
-              } catch (error) {
-                console.error(`Failed to download chunk ${chunk.chunkIndex}:`, error);
-                open(
-                  t('error.chunkDownloadFailed', {
-                    defaultValue: `Failed to download PDF chunk ${chunk.chunkIndex + 1}`,
-                  })
-                );
-              }
-            }
+            // Add each chunk as S3 attachment (no base64 conversion needed)
+            splitResponse.chunks.forEach((chunk) => {
+              pushS3File({
+                name: chunk.fileName,
+                type: file.type,
+                size: chunk.sizeBytes,
+                s3Key: chunk.s3Key,
+              });
+            });
 
             open(
               t('info.pdfSplit', {

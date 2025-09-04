@@ -748,7 +748,6 @@ def resolve_s3_attachments_in_messages(
     Resolve S3 attachments by downloading them and converting to regular attachments.
     This is needed because Bedrock Converse API doesn't support S3 references directly.
     """
-    from app.utils_s3_documents import get_large_message_content
     import base64
     
     resolved_messages = []
@@ -759,8 +758,9 @@ def resolve_s3_attachments_in_messages(
         for content in message.content:
             if isinstance(content, S3AttachmentContentModel):
                 try:
-                    # Download the file from S3
-                    file_content = get_large_message_content(content.s3_key)
+                    # Download the file from S3 document bucket
+                    from app.utils_s3_documents import download_document_from_s3
+                    file_content = download_document_from_s3(content.s3_key)
                     
                     # Convert to regular attachment
                     attachment_content = AttachmentContentModel(
