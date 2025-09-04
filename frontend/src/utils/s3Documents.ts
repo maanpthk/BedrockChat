@@ -1,6 +1,26 @@
 /**
  * Utilities for handling S3 document uploads and downloads
  */
+import { fetchAuthSession } from 'aws-amplify/auth';
+
+// Get the API base URL from environment
+const getApiBaseUrl = () => {
+  return import.meta.env.VITE_APP_API_ENDPOINT || '';
+};
+
+// Helper function to get auth headers
+const getAuthHeaders = async () => {
+  const idToken = (await fetchAuthSession()).tokens?.idToken;
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (idToken) {
+    headers['Authorization'] = 'Bearer ' + idToken.toString();
+  }
+  
+  return headers;
+};
 
 export interface DocumentUploadRequest {
   filename: string;
@@ -42,13 +62,14 @@ export async function getDocumentUploadUrl(
   conversationId: string,
   uploadRequest: DocumentUploadRequest
 ): Promise<DocumentUploadResponse> {
+  const baseUrl = getApiBaseUrl();
+  const headers = await getAuthHeaders();
+  
   const response = await fetch(
-    `/conversation/${conversationId}/documents/upload`,
+    `${baseUrl}/conversation/${conversationId}/documents/upload`,
     {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(uploadRequest),
     }
   );
@@ -87,9 +108,15 @@ export async function getDocumentDownloadUrl(
   conversationId: string,
   s3Key: string
 ): Promise<DocumentDownloadResponse> {
+  const baseUrl = getApiBaseUrl();
+  const headers = await getAuthHeaders();
   const encodedS3Key = encodeURIComponent(s3Key);
+  
   const response = await fetch(
-    `/conversation/${conversationId}/documents/${encodedS3Key}/download`
+    `${baseUrl}/conversation/${conversationId}/documents/${encodedS3Key}/download`,
+    {
+      headers,
+    }
   );
 
   if (!response.ok) {
@@ -106,13 +133,14 @@ export async function splitPDF(
   conversationId: string,
   splitRequest: PDFSplitRequest
 ): Promise<PDFSplitResponse> {
+  const baseUrl = getApiBaseUrl();
+  const headers = await getAuthHeaders();
+  
   const response = await fetch(
-    `/conversation/${conversationId}/documents/split-pdf`,
+    `${baseUrl}/conversation/${conversationId}/documents/split-pdf`,
     {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(splitRequest),
     }
   );
