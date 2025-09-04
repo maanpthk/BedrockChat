@@ -1,3 +1,5 @@
+import logging
+
 from app.repositories.conversation import (
     change_conversation_title,
     delete_conversation_by_id,
@@ -36,6 +38,9 @@ from app.user import User
 from fastapi import APIRouter, HTTPException, Request
 
 router = APIRouter(tags=["conversation"])
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 @router.get("/health")
