@@ -50,7 +50,8 @@ export interface PDFSplitResponse {
     s3Key: string;
     pageCount: number;
     sizeBytes: number;
-    base64Content: string;
+    downloadUrl: string;
+    fileName: string;
   }>;
   totalChunks: number;
 }

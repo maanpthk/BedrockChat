@@ -449,15 +449,33 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
               max_size_mb: BEDROCK_MAX_FILE_SIZE_MB,
             });
 
-            // Add each chunk as a regular attachment
-            splitResponse.chunks.forEach((chunk, index) => {
-              pushTextFile({
-                name: `${file.name} (Part ${index + 1}/${splitResponse.totalChunks})`,
-                type: file.type,
-                size: chunk.sizeBytes,
-                content: chunk.base64Content,
-              });
-            });
+            // Download each chunk and add as regular attachment
+            for (const chunk of splitResponse.chunks) {
+              try {
+                // Download the chunk using presigned URL
+                const response = await fetch(chunk.downloadUrl);
+                if (!response.ok) {
+                  throw new Error(`Failed to download chunk: ${response.statusText}`);
+                }
+                
+                const arrayBuffer = await response.arrayBuffer();
+                const base64Content = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+                
+                pushTextFile({
+                  name: chunk.fileName,
+                  type: file.type,
+                  size: chunk.sizeBytes,
+                  content: base64Content,
+                });
+              } catch (error) {
+                console.error(`Failed to download chunk ${chunk.chunkIndex}:`, error);
+                open(
+                  t('error.chunkDownloadFailed', {
+                    defaultValue: `Failed to download PDF chunk ${chunk.chunkIndex + 1}`,
+                  })
+                );
+              }
+            }
 
             open(
               t('info.pdfSplit', {
