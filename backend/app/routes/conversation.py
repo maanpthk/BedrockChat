@@ -314,9 +314,19 @@ def split_pdf_document(
                 else:
                     # Try to validate the PDF chunk by reading it
                     try:
-                        from app.utils_pdf import get_pdf_info
+                        from app.utils_pdf import get_pdf_info, extract_text_from_pdf
                         chunk_info_test = get_pdf_info(chunk_bytes)
                         logger.info(f"Chunk {i} validation: {chunk_info_test}")
+                        
+                        # Check if the PDF has extractable text
+                        try:
+                            text_content = extract_text_from_pdf(chunk_bytes)
+                            if text_content.strip():
+                                logger.info(f"Chunk {i} has {len(text_content)} characters of extractable text")
+                            else:
+                                logger.warning(f"Chunk {i} has no extractable text - might be image-only PDF")
+                        except Exception as text_e:
+                            logger.error(f"Chunk {i} text extraction failed: {text_e}")
                     except Exception as e:
                         logger.error(f"Chunk {i} PDF validation failed: {e}")
             else:
