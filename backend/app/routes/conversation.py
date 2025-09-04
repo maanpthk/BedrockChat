@@ -1,4 +1,5 @@
 import logging
+import os
 
 from app.repositories.conversation import (
     change_conversation_title,
@@ -281,8 +282,20 @@ def split_pdf_document(
         )
     
     try:
-        # Get the PDF content from S3
-        pdf_content = get_large_message_content(split_request.s3_key)
+        # Get the PDF content from S3 document bucket
+        import boto3
+        from botocore.exceptions import ClientError
+        
+        if not os.environ.get("DOCUMENT_BUCKET"):
+            raise HTTPException(status_code=500, detail="Document bucket not configured")
+            
+        s3_client = boto3.client("s3")
+        try:
+            response = s3_client.get_object(Bucket=os.environ["DOCUMENT_BUCKET"], Key=split_request.s3_key)
+            pdf_content = response["Body"].read()
+        except ClientError as e:
+            logger.error(f"Failed to download document from S3: {split_request.s3_key}, error: {e}")
+            raise HTTPException(status_code=404, detail="Document not found")
         
         # Split the PDF
         chunks = split_pdf_by_size(pdf_content, split_request.max_size_mb)
