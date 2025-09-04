@@ -271,8 +271,8 @@ def split_pdf_document(
     
     # Verify the document belongs to the user
     valid_prefixes = [
-        f"conversations/{current_user.id}/{conversation_id}/",
-        f"conversations/{current_user.id}/temp/"
+        f"conversations/{current_user.id}/{conversation_id}/documents/",
+        f"conversations/{current_user.id}/temp/documents/"
     ]
     if not any(split_request.s3_key.startswith(prefix) for prefix in valid_prefixes):
         raise HTTPException(
