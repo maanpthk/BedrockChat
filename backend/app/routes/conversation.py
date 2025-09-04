@@ -1,5 +1,6 @@
 import logging
 import os
+import uuid
 
 from app.repositories.conversation import (
     change_conversation_title,
@@ -304,24 +305,38 @@ def split_pdf_document(
         # Store each chunk and create response
         chunk_info = []
         for i, (chunk_bytes, page_count) in enumerate(chunks):
-            # Store chunk in S3
-            chunk_s3_key = store_large_message_content(
-                user_id=current_user.id,
-                conversation_id=conversation_id,
-                message_id=f"pdf_chunk_{i}_{split_request.s3_key.split('/')[-1]}",
-                content=chunk_bytes,
-                content_type="application/pdf",
+            # Store chunk in S3 document bucket (same as original files)
+            import uuid
+            chunk_file_id = str(uuid.uuid4())
+            original_filename = split_request.s3_key.split('/')[-1]
+            chunk_filename = f"{chunk_file_id}_{original_filename.rsplit('.', 1)[0]}_chunk_{i}.pdf"
+            
+            # Use same path structure as document uploads
+            chunk_s3_key = f"conversations/{current_user.id}/{conversation_id}/documents/{chunk_filename}"
+            
+            # Store chunk directly in document bucket
+            s3_client.put_object(
+                Bucket=os.environ["DOCUMENT_BUCKET"],
+                Key=chunk_s3_key,
+                Body=chunk_bytes,
+                ContentType="application/pdf"
             )
             
-            # Encode chunk as base64 for immediate use
-            chunk_base64 = base64.b64encode(chunk_bytes).decode('utf-8')
+            # Generate presigned download URL for the chunk
+            from app.utils_s3_documents import get_document_presigned_download_url
+            chunk_download_url = get_document_presigned_download_url(chunk_s3_key)
+            
+            # Generate chunk file name
+            original_filename = split_request.s3_key.split('/')[-1]
+            chunk_filename = f"{original_filename.rsplit('.', 1)[0]}_part_{i+1}.pdf"
             
             chunk_info.append(PDFChunkInfo(
                 chunk_index=i,
                 s3_key=chunk_s3_key,
                 page_count=page_count,
                 size_bytes=len(chunk_bytes),
-                base64_content=chunk_base64,
+                download_url=chunk_download_url,
+                file_name=chunk_filename,
             ))
         
         return PDFSplitResponse(

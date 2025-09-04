@@ -71,6 +71,7 @@ class S3AttachmentContent(BaseSchema):
     s3_key: str = Field(..., description="S3 key where the file is stored.")
     file_size: int = Field(..., description="File size in bytes.")
     mime_type: str = Field(..., description="MIME type of the file.")
+    download_url: str | None = Field(None, description="Presigned URL for downloading the file.")
 
 
 class FeedbackInput(BaseSchema):
@@ -292,7 +293,8 @@ class PDFChunkInfo(BaseSchema):
     s3_key: str = Field(..., description="S3 key where chunk is stored")
     page_count: int = Field(..., description="Number of pages in this chunk")
     size_bytes: int = Field(..., description="Size of chunk in bytes")
-    base64_content: str = Field(..., description="Base64 encoded content of the chunk")
+    download_url: str = Field(..., description="Presigned URL to download the chunk")
+    file_name: str = Field(..., description="Name of the chunk file")
 
 
 class PDFSplitResponse(BaseSchema):

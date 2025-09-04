@@ -635,10 +635,29 @@ def propose_conversation_title(
 def fetch_conversation(user_id: str, conversation_id: str) -> Conversation:
     conversation = find_conversation_by_id(user_id, conversation_id)
 
+    def process_content_with_presigned_urls(content_items):
+        """Process content items and generate presigned URLs for S3 attachments"""
+        processed_content = []
+        for c in content_items:
+            content = c.to_content()
+            # If it's an S3 attachment, generate presigned URL
+            if hasattr(content, 'content_type') and content.content_type == 's3_attachment':
+                from app.utils_s3_documents import get_document_presigned_download_url
+                try:
+                    # Generate presigned URL and update the content
+                    download_url = get_document_presigned_download_url(content.s3_key)
+                    # Add download_url to the content (frontend expects this)
+                    content.download_url = download_url
+                except Exception as e:
+                    logger.error(f"Failed to generate presigned URL for {content.s3_key}: {e}")
+                    # Keep the content but without download_url
+            processed_content.append(content)
+        return processed_content
+
     message_map = {
         message_id: MessageOutput(
             role=message.role,
-            content=[c.to_content() for c in message.content],
+            content=process_content_with_presigned_urls(message.content),
             model=message.model,
             children=message.children,
             parent=message.parent,
