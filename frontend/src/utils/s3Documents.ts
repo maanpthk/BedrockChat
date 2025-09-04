@@ -29,30 +29,30 @@ export interface DocumentUploadRequest {
 }
 
 export interface DocumentUploadResponse {
-  upload_url: string;
-  s3_key: string;
-  expires_in: number;
+  uploadUrl: string;
+  s3Key: string;
+  expiresIn: number;
 }
 
 export interface DocumentDownloadResponse {
-  download_url: string;
-  expires_in: number;
+  downloadUrl: string;
+  expiresIn: number;
 }
 
 export interface PDFSplitRequest {
-  s3_key: string;
+  s3_key: string;  // Keep snake_case for request body
   max_size_mb?: number;
 }
 
 export interface PDFSplitResponse {
   chunks: Array<{
-    chunk_index: number;
-    s3_key: string;
-    page_count: number;
-    size_bytes: number;
-    base64_content: string;
+    chunkIndex: number;
+    s3Key: string;
+    pageCount: number;
+    sizeBytes: number;
+    base64Content: string;
   }>;
-  total_chunks: number;
+  totalChunks: number;
 }
 
 /**

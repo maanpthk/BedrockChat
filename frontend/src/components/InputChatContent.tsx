@@ -441,21 +441,21 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
               file_size: file.size,
             });
 
-            await uploadFileToS3(uploadResponse.upload_url, file);
+            await uploadFileToS3(uploadResponse.uploadUrl, file);
 
             // Split the PDF
             const splitResponse = await splitPDF(props.conversationId || 'temp', {
-              s3_key: uploadResponse.s3_key,
+              s3_key: uploadResponse.s3Key,
               max_size_mb: BEDROCK_MAX_FILE_SIZE_MB,
             });
 
             // Add each chunk as a regular attachment
             splitResponse.chunks.forEach((chunk, index) => {
               pushTextFile({
-                name: `${file.name} (Part ${index + 1}/${splitResponse.total_chunks})`,
+                name: `${file.name} (Part ${index + 1}/${splitResponse.totalChunks})`,
                 type: file.type,
-                size: chunk.size_bytes,
-                content: chunk.base64_content,
+                size: chunk.sizeBytes,
+                content: chunk.base64Content,
               });
             });
 
@@ -474,13 +474,13 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
               file_size: file.size,
             });
 
-            await uploadFileToS3(uploadResponse.upload_url, file);
+            await uploadFileToS3(uploadResponse.uploadUrl, file);
 
             pushS3File({
               name: file.name,
               type: file.type,
               size: file.size,
-              s3Key: uploadResponse.s3_key,
+              s3Key: uploadResponse.s3Key,
             });
           }
         } catch (error) {
