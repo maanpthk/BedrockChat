@@ -285,7 +285,7 @@ const ChatMessage: React.FC<Props> = (props) => {
                                 props.conversationId || 'temp',
                                 content.s3Key
                               );
-                              window.open(downloadResponse.download_url, '_blank');
+                              window.open(downloadResponse.downloadUrl, '_blank');
                             } catch (error) {
                               console.error('Failed to download S3 document:', error);
                             }

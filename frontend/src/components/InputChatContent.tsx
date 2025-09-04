@@ -461,8 +461,8 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
 
             open(
               t('info.pdfSplit', {
-                chunks: splitResponse.total_chunks,
-                defaultValue: `PDF split into ${splitResponse.total_chunks} parts`,
+                chunks: splitResponse.totalChunks,
+                defaultValue: `PDF split into ${splitResponse.totalChunks} parts`,
               })
             );
           } else {
