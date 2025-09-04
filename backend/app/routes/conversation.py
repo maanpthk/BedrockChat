@@ -23,6 +23,7 @@ from app.routes.schemas.conversation import (
     FeedbackInput,
     FeedbackOutput,
     NewTitleInput,
+    PDFChunkInfo,
     PDFSplitRequest,
     PDFSplitResponse,
     ProposedTitle,
@@ -315,13 +316,13 @@ def split_pdf_document(
             # Encode chunk as base64 for immediate use
             chunk_base64 = base64.b64encode(chunk_bytes).decode('utf-8')
             
-            chunk_info.append({
-                "chunk_index": i,
-                "s3_key": chunk_s3_key,
-                "page_count": page_count,
-                "size_bytes": len(chunk_bytes),
-                "base64_content": chunk_base64,
-            })
+            chunk_info.append(PDFChunkInfo(
+                chunk_index=i,
+                s3_key=chunk_s3_key,
+                page_count=page_count,
+                size_bytes=len(chunk_bytes),
+                base64_content=chunk_base64,
+            ))
         
         return PDFSplitResponse(
             chunks=chunk_info,

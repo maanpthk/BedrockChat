@@ -287,6 +287,14 @@ class PDFSplitRequest(BaseSchema):
     max_size_mb: float = Field(default=4.0, description="Maximum size per chunk in MB")
 
 
+class PDFChunkInfo(BaseSchema):
+    chunk_index: int = Field(..., description="Index of the chunk")
+    s3_key: str = Field(..., description="S3 key where chunk is stored")
+    page_count: int = Field(..., description="Number of pages in this chunk")
+    size_bytes: int = Field(..., description="Size of chunk in bytes")
+    base64_content: str = Field(..., description="Base64 encoded content of the chunk")
+
+
 class PDFSplitResponse(BaseSchema):
-    chunks: list[dict] = Field(..., description="List of PDF chunks with metadata")
+    chunks: list[PDFChunkInfo] = Field(..., description="List of PDF chunks with metadata")
     total_chunks: int = Field(..., description="Total number of chunks created")
