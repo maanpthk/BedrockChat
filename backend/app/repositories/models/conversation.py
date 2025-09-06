@@ -253,6 +253,7 @@ class S3AttachmentContentModel(BaseModel):
     s3_key: str
     file_size: int
     mime_type: str
+    requires_ocr: bool = False
 
     @classmethod
     def from_s3_attachment_content(cls, content: S3AttachmentContent) -> Self:
@@ -262,6 +263,7 @@ class S3AttachmentContentModel(BaseModel):
             s3_key=content.s3_key,
             file_size=content.file_size,
             mime_type=content.mime_type,
+            requires_ocr=content.requires_ocr,
         )
 
     def to_content(self) -> Content:
@@ -271,6 +273,7 @@ class S3AttachmentContentModel(BaseModel):
             s3_key=self.s3_key,
             file_size=self.file_size,
             mime_type=self.mime_type,
+            requires_ocr=self.requires_ocr,
         )
 
     def to_contents_for_converse(self) -> list[ContentBlockTypeDef]:

@@ -17,6 +17,15 @@ DOCUMENT_BUCKET = os.environ.get("DOCUMENT_BUCKET", "")
 LARGE_MESSAGE_BUCKET = os.environ.get("LARGE_MESSAGE_BUCKET", "")
 
 
+def get_s3_bucket_name() -> str:
+    """
+    Get the S3 bucket name for documents.
+    """
+    if not DOCUMENT_BUCKET:
+        raise ValueError("DOCUMENT_BUCKET environment variable not set")
+    return DOCUMENT_BUCKET
+
+
 def get_document_presigned_upload_url(
     user_id: str,
     conversation_id: str,

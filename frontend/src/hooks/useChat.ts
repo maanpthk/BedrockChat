@@ -44,6 +44,7 @@ export type S3AttachmentType = {
   fileType: string;
   s3Key: string;
   fileSize: number;
+  requiresOCR?: boolean;
 };
 
 export type ThinkingAction =

@@ -92,12 +92,14 @@ const useInputChatContentState = create<{
     type: string;
     size: number;
     s3Key: string;
+    requiresOCR?: boolean;
   }[];
   pushS3File: (file: {
     name: string;
     type: string;
     size: number;
     s3Key: string;
+    requiresOCR?: boolean;
   }) => void;
   removeS3File: (index: number) => void;
   clearS3AttachedFiles: () => void;
@@ -108,6 +110,8 @@ const useInputChatContentState = create<{
   uploadingFiles: Set<string>;
   addUploadingFile: (fileName: string) => void;
   removeUploadingFile: (fileName: string) => void;
+  containsScannedImages: boolean;
+  setContainsScannedImages: (value: boolean) => void;
 
 }>((set, get) => ({
   base64EncodedImages: [],
@@ -191,6 +195,10 @@ const useInputChatContentState = create<{
       return { uploadingFiles: newSet };
     });
   },
+  containsScannedImages: false,
+  setContainsScannedImages: (value) => {
+    set({ containsScannedImages: value });
+  },
 
 }));
 
@@ -230,6 +238,8 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
       uploadingFiles,
       addUploadingFile,
       removeUploadingFile,
+      containsScannedImages,
+      setContainsScannedImages,
     } = useInputChatContentState();
 
     useEffect(() => {
@@ -259,6 +269,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
         fileType: file.type,
         s3Key: file.s3Key,
         fileSize: file.size,
+        requiresOCR: file.requiresOCR || false,
       }));
 
       props.onSend(
@@ -376,6 +387,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
                 type: file.type,
                 size: chunk.sizeBytes,
                 s3Key: chunk.s3Key,
+                requiresOCR: false, // Split PDFs don't need OCR
               });
             });
 
@@ -401,6 +413,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
               type: file.type,
               size: file.size,
               s3Key: uploadResponse.s3Key,
+              requiresOCR: containsScannedImages, // Mark for OCR processing
             });
           }
         } catch (error) {
@@ -432,8 +445,10 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
 
         // All files now go to S3 to avoid Lambda response size limits
         
-        // Check if PDF should be split
-        const shouldSplitPDF = file.type === 'application/pdf' && file.size > BEDROCK_MAX_FILE_SIZE_BYTES;
+        // Check if PDF should be split (only if not scanned)
+        const shouldSplitPDF = file.type === 'application/pdf' && 
+                              file.size > BEDROCK_MAX_FILE_SIZE_BYTES && 
+                              !containsScannedImages;
 
         // Always use S3 storage
         await handleLargeFileUpload(file, shouldSplitPDF);
@@ -598,6 +613,20 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
                   forceReasoningEnabled={forceReasoningEnabled}
                   onToggleReasoning={() => onChangeReasoning(!reasoningEnabled)}
                 />
+              )}
+              {(s3AttachedFiles.some(f => f.type === 'application/pdf') || 
+                attachedFiles.some(f => f.type === 'application/pdf') ||
+                uploadingFiles.size > 0) && (
+                <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 ml-2">
+                  <input
+                    type="checkbox"
+                    checked={containsScannedImages}
+                    onChange={(e) => setContainsScannedImages(e.target.checked)}
+                    disabled={props.isLoading}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  Contains scanned images
+                </label>
               )}
             </div>
             <ButtonSend

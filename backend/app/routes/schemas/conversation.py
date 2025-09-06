@@ -72,6 +72,7 @@ class S3AttachmentContent(BaseSchema):
     file_size: int = Field(..., description="File size in bytes.")
     mime_type: str = Field(..., description="MIME type of the file.")
     download_url: str | None = Field(None, description="Presigned URL for downloading the file.")
+    requires_ocr: bool = Field(False, description="Whether this file requires OCR processing.")
 
 
 class FeedbackInput(BaseSchema):

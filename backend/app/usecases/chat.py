@@ -758,35 +758,56 @@ def resolve_s3_attachments_in_messages(
         for content in message.content:
             if isinstance(content, S3AttachmentContentModel):
                 try:
-                    # Download the file from S3 document bucket
-                    from app.utils_s3_documents import download_document_from_s3
-                    logger.info(f"Downloading S3 attachment: {content.s3_key}")
-                    file_content = download_document_from_s3(content.s3_key)
-                    
-                    # Validate the downloaded content
-                    if len(file_content) == 0:
-                        logger.error(f"Downloaded empty content for {content.file_name} from S3 key: {content.s3_key}")
-                        continue
-                    
-                    # For PDF files, validate they're actually valid PDFs
-                    if content.file_name.lower().endswith('.pdf'):
-                        # Check if it starts with PDF header
-                        if not file_content.startswith(b'%PDF-'):
-                            logger.error(f"Invalid PDF content for {content.file_name}: does not start with PDF header")
-                            logger.error(f"First 50 bytes: {file_content[:50]}")
+                    # Check if this attachment requires OCR processing
+                    if content.requires_ocr and content.file_name.lower().endswith('.pdf'):
+                        logger.info(f"Processing OCR for scanned PDF: {content.file_name}")
+                        
+                        # Extract text using Textract
+                        from app.utils_textract import extract_text_with_textract
+                        from app.utils_s3_documents import get_s3_bucket_name
+                        
+                        bucket_name = get_s3_bucket_name()
+                        extracted_text = extract_text_with_textract(bucket_name, content.s3_key)
+                        
+                        # Create text content instead of attachment
+                        text_content = TextContentModel(
+                            content_type="text",
+                            body=f"## Extracted Text from {content.file_name}\n\n{extracted_text}"
+                        )
+                        resolved_content.append(text_content)
+                        
+                        logger.info(f"OCR completed for {content.file_name}, extracted {len(extracted_text)} characters")
+                        
+                    else:
+                        # Regular S3 attachment processing (download and pass as binary)
+                        from app.utils_s3_documents import download_document_from_s3
+                        logger.info(f"Downloading S3 attachment: {content.s3_key}")
+                        file_content = download_document_from_s3(content.s3_key)
+                        
+                        # Validate the downloaded content
+                        if len(file_content) == 0:
+                            logger.error(f"Downloaded empty content for {content.file_name} from S3 key: {content.s3_key}")
                             continue
-                        else:
-                            logger.info(f"Valid PDF content detected for {content.file_name}")
-                    
-                    # Convert to regular attachment - pass bytes directly
-                    attachment_content = AttachmentContentModel(
-                        content_type="attachment",
-                        file_name=content.file_name,
-                        body=file_content,
-                    )
-                    resolved_content.append(attachment_content)
-                    
-                    logger.info(f"Resolved S3 attachment: {content.file_name}, size: {len(file_content)} bytes")
+                        
+                        # For PDF files, validate they're actually valid PDFs
+                        if content.file_name.lower().endswith('.pdf'):
+                            # Check if it starts with PDF header
+                            if not file_content.startswith(b'%PDF-'):
+                                logger.error(f"Invalid PDF content for {content.file_name}: does not start with PDF header")
+                                logger.error(f"First 50 bytes: {file_content[:50]}")
+                                continue
+                            else:
+                                logger.info(f"Valid PDF content detected for {content.file_name}")
+                        
+                        # Convert to regular attachment - pass bytes directly
+                        attachment_content = AttachmentContentModel(
+                            content_type="attachment",
+                            file_name=content.file_name,
+                            body=file_content,
+                        )
+                        resolved_content.append(attachment_content)
+                        
+                        logger.info(f"Resolved S3 attachment: {content.file_name}, size: {len(file_content)} bytes")
                     
                 except Exception as e:
                     logger.error(f"Failed to resolve S3 attachment {content.file_name}: {e}")
