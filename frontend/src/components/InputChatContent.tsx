@@ -105,6 +105,9 @@ const useInputChatContentState = create<{
   setPreviewImageUrl: (url: string | null) => void;
   isOpenPreviewImage: boolean;
   setIsOpenPreviewImage: (isOpen: boolean) => void;
+  uploadingFiles: Set<string>;
+  addUploadingFile: (fileName: string) => void;
+  removeUploadingFile: (fileName: string) => void;
 
 }>((set, get) => ({
   base64EncodedImages: [],
@@ -175,6 +178,19 @@ const useInputChatContentState = create<{
       s3AttachedFiles: [],
     });
   },
+  uploadingFiles: new Set(),
+  addUploadingFile: (fileName) => {
+    set((state) => ({
+      uploadingFiles: new Set(state.uploadingFiles).add(fileName),
+    }));
+  },
+  removeUploadingFile: (fileName) => {
+    set((state) => {
+      const newSet = new Set(state.uploadingFiles);
+      newSet.delete(fileName);
+      return { uploadingFiles: newSet };
+    });
+  },
 
 }));
 
@@ -211,6 +227,9 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
       pushS3File,
       removeS3File,
       clearS3AttachedFiles,
+      uploadingFiles,
+      addUploadingFile,
+      removeUploadingFile,
     } = useInputChatContentState();
 
     useEffect(() => {
@@ -323,6 +342,9 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
 
     const handleLargeFileUpload = useCallback(
       async (file: File, shouldSplit: boolean) => {
+        // Add loading state
+        addUploadingFile(file.name);
+        
         try {
           // Import S3 utilities dynamically
           const { 
@@ -388,9 +410,12 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
               defaultValue: 'Failed to upload file',
             })
           );
+        } finally {
+          // Remove loading state
+          removeUploadingFile(file.name);
         }
       },
-      [pushS3File, open, t, props.conversationId]
+      [pushS3File, open, t, props.conversationId, addUploadingFile, removeUploadingFile]
     );
 
     const handleAttachedFileRead = useCallback(
@@ -618,7 +643,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
               </ModalDialog>
             </div>
           )}
-          {(attachedFiles.length > 0 || s3AttachedFiles.length > 0) && (
+          {(attachedFiles.length > 0 || s3AttachedFiles.length > 0 || uploadingFiles.size > 0) && (
             <div className="relative m-2 mr-24 flex flex-wrap gap-3">
               {attachedFiles.map((file, idx) => (
                 <div key={`regular-${idx}`} className="relative flex flex-col items-center">
@@ -642,6 +667,16 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
                     }}>
                     <PiX />
                   </ButtonIcon>
+                </div>
+              ))}
+              {Array.from(uploadingFiles).map((fileName) => (
+                <div key={`uploading-${fileName}`} className="relative flex flex-col items-center">
+                  <div className="flex items-center gap-2 rounded-md border border-gray-300 bg-gray-50 p-2 text-sm dark:border-gray-600 dark:bg-gray-800">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
+                    <span className="text-gray-600 dark:text-gray-300">
+                      {fileName} (uploading...)
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>

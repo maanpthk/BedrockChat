@@ -239,7 +239,11 @@ def get_document_download_url(
     current_user: User = request.state.current_user
     
     # Verify the document exists and belongs to the user
-    if not s3_key.startswith(f"conversations/{current_user.id}/{conversation_id}/"):
+    valid_prefixes = [
+        f"conversations/{current_user.id}/{conversation_id}/documents/",
+        f"conversations/{current_user.id}/temp/documents/"
+    ]
+    if not any(s3_key.startswith(prefix) for prefix in valid_prefixes):
         raise HTTPException(
             status_code=403,
             detail="Access denied to this document"
