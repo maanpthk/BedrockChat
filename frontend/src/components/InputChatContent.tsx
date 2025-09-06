@@ -33,10 +33,10 @@ import {
   MAX_FILE_SIZE_MB,
   SUPPORTED_FILE_EXTENSIONS,
   MAX_ATTACHED_FILES,
-  S3_STORAGE_THRESHOLD_BYTES,
-  S3_STORAGE_THRESHOLD_MB,
   MAX_SUPPORTED_FILE_SIZE_BYTES,
   MAX_SUPPORTED_FILE_SIZE_MB,
+  BEDROCK_MAX_FILE_SIZE_BYTES,
+  BEDROCK_MAX_FILE_SIZE_MB,
 } from '../constants/supportedAttachedFiles';
 
 type Props = BaseProps & {
@@ -68,12 +68,7 @@ type Props = BaseProps & {
 // Ref: https://docs.anthropic.com/en/docs/build-with-claude/vision#evaluate-image-size
 const MAX_IMAGE_WIDTH = 1568;
 const MAX_IMAGE_HEIGHT = 1568;
-// Use existing Bedrock limits from constants
-const BEDROCK_MAX_FILE_SIZE_MB = MAX_FILE_SIZE_MB; // 4.0MB
-const BEDROCK_MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_BYTES;
-
-// Lambda response limit for conversation history - use S3 storage threshold
-const MAX_CONVERSATION_RESPONSE_BYTES = S3_STORAGE_THRESHOLD_BYTES;
+// All files now go to S3 to avoid Lambda response size limits
 
 const useInputChatContentState = create<{
   base64EncodedImages: string[];
@@ -112,8 +107,7 @@ const useInputChatContentState = create<{
   setPreviewImageUrl: (url: string | null) => void;
   isOpenPreviewImage: boolean;
   setIsOpenPreviewImage: (isOpen: boolean) => void;
-  totalFileSizeToSend: number;
-  setTotalFileSizeToSend: (size: number) => void;
+
 }>((set, get) => ({
   base64EncodedImages: [],
   pushBase64EncodedImage: (encodedImage) => {
@@ -183,11 +177,7 @@ const useInputChatContentState = create<{
       s3AttachedFiles: [],
     });
   },
-  totalFileSizeToSend: 0,
-  setTotalFileSizeToSend: (size) =>
-    set({
-      totalFileSizeToSend: size,
-    }),
+
 }));
 
 const InputChatContent = forwardRef<HTMLElement, Props>(
@@ -224,8 +214,6 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
       pushS3File,
       removeS3File,
       clearS3AttachedFiles,
-      totalFileSizeToSend,
-      setTotalFileSizeToSend,
     } = useInputChatContentState();
 
     useEffect(() => {
@@ -324,30 +312,13 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
 
             const resizedImageData = canvas.toDataURL('image/png');
 
-            // Total file size check
-            if (
-              totalFileSizeToSend + resizedImageData.length >
-              MAX_CONVERSATION_RESPONSE_BYTES
-            ) {
-              open(
-                t('error.totalFileSizeToSendExceeded', {
-                  maxSize: `${S3_STORAGE_THRESHOLD_MB} MB`,
-                })
-              );
-              return;
-            }
-
+            // Images still use base64 for now (could be moved to S3 later if needed)
             pushBase64EncodedImage(resizedImageData);
-            setTotalFileSizeToSend(
-              totalFileSizeToSend + resizedImageData.length
-            );
           };
         };
       },
       [
         pushBase64EncodedImage,
-        totalFileSizeToSend,
-        setTotalFileSizeToSend,
         open,
         t,
       ]
@@ -365,63 +336,18 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
           return;
         }
 
-        // Check if file should use S3 storage
-        const shouldUseS3 = file.size > MAX_CONVERSATION_RESPONSE_BYTES;
+        // All files now go to S3 to avoid Lambda response size limits
         
         // Check if PDF should be split
         const shouldSplitPDF = file.type === 'application/pdf' && file.size > BEDROCK_MAX_FILE_SIZE_BYTES;
 
-        if (shouldUseS3 || shouldSplitPDF) {
-          await handleLargeFileUpload(file, shouldSplitPDF);
-        } else {
-          await handleRegularFileUpload(file);
-        }
+        // Always use S3 storage
+        await handleLargeFileUpload(file, shouldSplitPDF);
       },
-      [pushTextFile, pushS3File, totalFileSizeToSend, setTotalFileSizeToSend, open, t]
+      [handleLargeFileUpload, open, t]
     );
 
-    const handleRegularFileUpload = useCallback(
-      (file: File) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          if (reader.result instanceof ArrayBuffer) {
-            // Convert from byte to base64 encoded string
-            const byteArray = new Uint8Array(reader.result);
-            let binaryString = '';
-            const chunkSize = 8192;
 
-            for (let i = 0; i < byteArray.length; i += chunkSize) {
-              const chunk = byteArray.slice(i, i + chunkSize);
-              // To avoid `Maximum call stack size exceeded` error, split into smaller chunks
-              binaryString += String.fromCharCode(...chunk);
-            }
-            const base64String = btoa(binaryString);
-
-            // Total file size check
-            if (
-              totalFileSizeToSend + base64String.length >
-              MAX_CONVERSATION_RESPONSE_BYTES
-            ) {
-              open(
-                t('error.totalFileSizeToSendExceeded', {
-                  maxSize: `${S3_STORAGE_THRESHOLD_MB} MB`,
-                })
-              );
-              return;
-            }
-            pushTextFile({
-              name: file.name,
-              type: file.type,
-              size: file.size,
-              content: base64String,
-            });
-            setTotalFileSizeToSend(totalFileSizeToSend + base64String.length);
-          }
-        };
-        reader.readAsArrayBuffer(file);
-      },
-      [pushTextFile, totalFileSizeToSend, setTotalFileSizeToSend, open, t]
-    );
 
     const handleLargeFileUpload = useCallback(
       async (file: File, shouldSplit: boolean) => {
@@ -492,7 +418,7 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
           );
         }
       },
-      [pushTextFile, pushS3File, open, t]
+      [pushS3File, open, t, props.conversationId]
     );
 
     useEffect(() => {
@@ -537,11 +463,13 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
         // Check if the total number of attached files exceeds the limit
         const currentAttachedFiles =
           useInputChatContentState.getState().attachedFiles;
+        const currentS3AttachedFiles =
+          useInputChatContentState.getState().s3AttachedFiles;
         const currentAttachedFilesCount = currentAttachedFiles.filter((file) =>
           SUPPORTED_FILE_EXTENSIONS.some((extension) =>
             file.name.endsWith(extension)
           )
-        ).length;
+        ).length + currentS3AttachedFiles.length;
 
         let newAttachedFilesCount = 0;
         for (let i = 0; i < fileList.length; i++) {
