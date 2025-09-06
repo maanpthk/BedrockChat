@@ -29,8 +29,6 @@ import ModalDialog from './ModalDialog';
 import UploadedAttachedFile from './UploadedAttachedFile';
 import useSnackbar from '../hooks/useSnackbar';
 import {
-  MAX_FILE_SIZE_BYTES,
-  MAX_FILE_SIZE_MB,
   SUPPORTED_FILE_EXTENSIONS,
   MAX_ATTACHED_FILES,
   MAX_SUPPORTED_FILE_SIZE_BYTES,
@@ -207,7 +205,6 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
       isOpenPreviewImage,
       setIsOpenPreviewImage,
       attachedFiles,
-      pushTextFile,
       removeTextFile,
       clearAttachedFiles,
       s3AttachedFiles,
@@ -324,31 +321,6 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
       ]
     );
 
-    const handleAttachedFileRead = useCallback(
-      async (file: File) => {
-        // Check maximum supported file size
-        if (file.size > MAX_SUPPORTED_FILE_SIZE_BYTES) {
-          open(
-            t('error.attachment.fileSizeExceeded', {
-              maxSize: `${MAX_SUPPORTED_FILE_SIZE_MB} MB`,
-            })
-          );
-          return;
-        }
-
-        // All files now go to S3 to avoid Lambda response size limits
-        
-        // Check if PDF should be split
-        const shouldSplitPDF = file.type === 'application/pdf' && file.size > BEDROCK_MAX_FILE_SIZE_BYTES;
-
-        // Always use S3 storage
-        await handleLargeFileUpload(file, shouldSplitPDF);
-      },
-      [handleLargeFileUpload, open, t]
-    );
-
-
-
     const handleLargeFileUpload = useCallback(
       async (file: File, shouldSplit: boolean) => {
         try {
@@ -419,6 +391,29 @@ const InputChatContent = forwardRef<HTMLElement, Props>(
         }
       },
       [pushS3File, open, t, props.conversationId]
+    );
+
+    const handleAttachedFileRead = useCallback(
+      async (file: File) => {
+        // Check maximum supported file size
+        if (file.size > MAX_SUPPORTED_FILE_SIZE_BYTES) {
+          open(
+            t('error.attachment.fileSizeExceeded', {
+              maxSize: `${MAX_SUPPORTED_FILE_SIZE_MB} MB`,
+            })
+          );
+          return;
+        }
+
+        // All files now go to S3 to avoid Lambda response size limits
+        
+        // Check if PDF should be split
+        const shouldSplitPDF = file.type === 'application/pdf' && file.size > BEDROCK_MAX_FILE_SIZE_BYTES;
+
+        // Always use S3 storage
+        await handleLargeFileUpload(file, shouldSplitPDF);
+      },
+      [handleLargeFileUpload, open, t]
     );
 
     useEffect(() => {
